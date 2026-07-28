@@ -44,6 +44,7 @@ const RELEVANT_HARNESS_PATHS = (
     "tracks/polyopt/solutions/sdp-gap-seekers/scripts/gap_status_array.sbatch",
     "tracks/polyopt/solutions/sdp-gap-seekers/scripts/prepare_gap_status_run.sh",
     "tracks/polyopt/solutions/sdp-gap-seekers/scripts/finalize_gap_status_run.sh",
+    "tracks/polyopt/solutions/sdp-gap-seekers/scripts/verify_gap_ray.jl",
     "skills/using-slurm/profiles/scnet-xh5.toml",
 )
 
