@@ -412,9 +412,34 @@ const COMPONENT_ORDER = Dict(
     :G_product => 3,
 )
 
-function collect_rows(blocks, source::CoreMGKPlan)
+function report_pair_progress(
+    callback,
+    progress_every::Int,
+    phase::Symbol,
+    completed::Int,
+    total::Int,
+)
+    if progress_every > 0 &&
+       (completed % progress_every == 0 || completed == total)
+        callback((
+            phase=phase,
+            completed=completed,
+            total=total,
+        ))
+    end
+    return nothing
+end
+
+function collect_rows(
+    blocks,
+    source::CoreMGKPlan,
+    progress_every::Int,
+    progress_callback,
+    total_pairs::Int,
+)
     origins = Dict{ScalarMoment,Set{Symbol}}()
     component_records = 0
+    completed_pairs = 0
     for block in blocks
         dimension = length(block.manifest.entries)
         for j in 1:dimension, k in j:dimension
@@ -428,6 +453,14 @@ function collect_rows(blocks, source::CoreMGKPlan)
                     )
                 end
             end
+            completed_pairs += 1
+            report_pair_progress(
+                progress_callback,
+                progress_every,
+                :collect_rows,
+                completed_pairs,
+                total_pairs,
+            )
         end
     end
     rows = collect(keys(origins))
@@ -464,9 +497,18 @@ function scalar_row_records(rows, origins, row_ids)
     return records
 end
 
-function wiring_records(blocks, source::CoreMGKPlan, row_positions, row_ids)
+function wiring_records(
+    blocks,
+    source::CoreMGKPlan,
+    row_positions,
+    row_ids,
+    progress_every::Int,
+    progress_callback,
+    total_pairs::Int,
+)
     result = Any[]
     nonzero_coefficients = 0
+    completed_pairs = 0
     for block in blocks
         dimension = length(block.manifest.entries)
         for j in 1:dimension, k in j:dimension
@@ -506,6 +548,14 @@ function wiring_records(blocks, source::CoreMGKPlan, row_positions, row_ids)
                     "component_records" => components,
                 ),
             )
+            completed_pairs += 1
+            report_pair_progress(
+                progress_callback,
+                progress_every,
+                :wiring_records,
+                completed_pairs,
+                total_pairs,
+            )
         end
     end
     return result, nonzero_coefficients
@@ -524,7 +574,20 @@ end
 Build the complete gamma-independent native Square `core_mgk` inventory and
 its hash envelope. No conic model or optimizer is constructed.
 """
-function build_square_core_inventory(problem::GapProblem)
+function build_square_core_inventory(
+    problem::GapProblem;
+    progress_every::Integer=0,
+    progress_callback=nothing,
+)
+    progress_every >= 0 ||
+        throw(ArgumentError("progress_every must be nonnegative"))
+    progress_every <= typemax(Int) ||
+        throw(ArgumentError("progress_every is too large"))
+    progress_interval = Int(progress_every)
+    progress_interval == 0 || progress_callback isa Function ||
+        throw(ArgumentError(
+            "a progress callback is required when progress_every is nonzero",
+        ))
     source = core_mgk_plan(problem)
     validate_basis_manifest(source.positive_basis, problem, :positive) ||
         error("positive structured manifest failed recomputation")
@@ -585,17 +648,35 @@ function build_square_core_inventory(problem::GapProblem)
     ordered_block_ids = [block.id for block in blocks]
     block_order_digest = domain_sha256("AIBLOCKORDER1", ordered_block_ids)
 
-    rows, origins, component_record_count = collect_rows(blocks, source)
+    total_pairs = sum(
+        div(
+            length(block.manifest.entries) *
+            (length(block.manifest.entries) + 1),
+            2,
+        )
+        for block in blocks
+    )
+    rows, origins, component_record_count = collect_rows(
+        blocks,
+        source,
+        progress_interval,
+        progress_callback,
+        total_pairs,
+    )
     row_positions = Dict(row => index for (index, row) in enumerate(rows))
     row_ids = Dict(row => row_id(row) for row in rows)
     row_records = scalar_row_records(rows, origins, row_ids)
     wiring, nonzero_coefficient_count =
-        wiring_records(blocks, source, row_positions, row_ids)
-    expected_pairs = sum(
-        div(length(block.manifest.entries) *
-            (length(block.manifest.entries) + 1), 2)
-        for block in blocks
-    )
+        wiring_records(
+            blocks,
+            source,
+            row_positions,
+            row_ids,
+            progress_interval,
+            progress_callback,
+            total_pairs,
+        )
+    expected_pairs = total_pairs
     expected_components = div(
         length(source.positive_basis.entries) *
         (length(source.positive_basis.entries) + 1),

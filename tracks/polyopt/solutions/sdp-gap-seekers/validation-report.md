@@ -13,14 +13,14 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `705/705` checks passed without optimization.
+Result on Julia 1.11.9: `711/711` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier  110
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
-Square status envelope fail-closed contract  14
+Square status envelope fail-closed contract  16
 Pauli canonicalization                       10
 bare Pauli basis counts                      72
 full state-polynomial formal counts          13
@@ -30,7 +30,7 @@ generic solver-free problem adapter          43
 structured basis manifests                  100
 shared core canonical wire grammar           17
 complex Hermitian to real PSD rendering        5
-Square shared-core inventory declarations      9
+Square shared-core inventory declarations     13
 solver-free Square conic render               20
 exact core M/G/K pair algebra                23
 Square J1-J2 core M/G/K source gate         125

@@ -237,6 +237,8 @@ end
     @test occursin("build_square_core_inventory", script)
     @test occursin("validate_square_core_inventory", script)
     @test occursin("audit_rendered_mof", script)
+    @test occursin("progress_every=50_000", script)
+    @test occursin("flush(stdout)", script)
     @test occursin("status --porcelain --untracked-files=no", script)
     @test occursin("status\\tunsolved", script)
     @test !occursin("optimize!", script)
@@ -845,6 +847,42 @@ end
         2;
         basis_mode=:structured,
         basis_spec=StructuredBasisSpec(:one_symbol_lift, 1),
+    )
+    progress_events = Any[]
+    callback = event -> push!(progress_events, event)
+    SquareCoreInventory.report_pair_progress(
+        callback,
+        2,
+        :fixture,
+        1,
+        3,
+    )
+    @test isempty(progress_events)
+    SquareCoreInventory.report_pair_progress(
+        callback,
+        2,
+        :fixture,
+        2,
+        3,
+    )
+    SquareCoreInventory.report_pair_progress(
+        callback,
+        2,
+        :fixture,
+        3,
+        3,
+    )
+    @test [
+        (event.phase, event.completed, event.total)
+        for event in progress_events
+    ] == [(:fixture, 2, 3), (:fixture, 3, 3)]
+    @test_throws ArgumentError build_square_core_inventory(
+        problem;
+        progress_every=-1,
+    )
+    @test_throws ArgumentError build_square_core_inventory(
+        problem;
+        progress_every=1,
     )
     source = core_mgk_plan(problem)
     positive_selector =

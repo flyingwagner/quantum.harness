@@ -20,6 +20,25 @@ file_sha256(path::AbstractString) =
         bytes2hex(sha256(io))
     end
 
+function progress(phase::AbstractString)
+    println("progress\t", phase)
+    flush(stdout)
+    return nothing
+end
+
+function core_progress(event)
+    println(
+        "progress\t",
+        event.phase,
+        '\t',
+        event.completed,
+        '/',
+        event.total,
+    )
+    flush(stdout)
+    return nothing
+end
+
 function git_object(
     repo::AbstractString,
     git_dir::AbstractString,
@@ -62,9 +81,17 @@ function main(args=ARGS)
         basis_mode=:structured,
         basis_spec=StructuredBasisSpec(:one_symbol_lift, 1),
     )
-    expected_core = build_square_core_inventory(problem)
+    progress("core_source_rebuild_start")
+    expected_core = build_square_core_inventory(
+        problem;
+        progress_every=50_000,
+        progress_callback=core_progress,
+    )
+    progress("core_source_rebuild_complete")
+    progress("core_artifact_validation_start")
     parsed_core =
         validate_square_core_inventory(core_path, core_envelope_path)
+    progress("core_artifact_validation_complete")
     source_rebuild_match =
         expected_core.math_sha256 == parsed_core.math_sha256 &&
         expected_core.envelope_sha256 == parsed_core.envelope_sha256
@@ -77,8 +104,12 @@ function main(args=ARGS)
     expected_core = nothing
     GC.gc()
 
+    progress("conic_source_rebuild_start")
     plan = build_square_conic_plan(problem)
+    progress("conic_source_rebuild_complete")
+    progress("mof_exact_replay_start")
     mof_audit = audit_rendered_mof(plan, mof_path)
+    progress("mof_exact_replay_complete")
     identity = (
         L=1,
         d=2,
@@ -105,6 +136,7 @@ function main(args=ARGS)
         mof_sha256=file_sha256(mof_path),
         mof_audit=mof_audit,
     )
+    progress("status_envelope_write")
     write_square_status_envelope(output_path, result)
     println("source_commit\t", source_commit)
     println("source_tree\t", source_tree)
