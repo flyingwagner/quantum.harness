@@ -69,23 +69,19 @@ The independent hand fixture `H=Z`, basis `[X,Y]`, fixes the complex signs:
 
 ## Shortest path to a status/audit runner
 
-The next boundary is serialization and full conic semantics, not another
-basis selector:
+The reviewed typed byte grammar, Pauli/basis/row content IDs, normalization,
+stationarity, right-hand sides, feasibility objective, exact scalar-row
+mapping, and complex-to-real PSD rendering are now implemented and tested.
+The remaining boundary is:
 
-1. Add `src/SharedCoreWire.jl` implementing the reviewed typed byte grammar,
-   content IDs, block/row/wiring records, and envelope. It must reproduce the
-   70-byte grammar and 181-byte `H=Z` coefficient goldens, serialize all
-   247,540 component records, and recompute pair/component coverage.
-2. Add `scripts/emit_square_core_inventory.jl` over `CoreMGKPlan`. It must emit
-   the canonical math artifact plus envelope and source-evidence sidecar, with
-   manifest digests recomputed from the structured rows. Its math hash must be
-   independent of numeric γ.
-3. Add `src/SquareGapConic.jl` for the still-uncovered complete-relaxation
-   fields: `L(1)=1`, stationarity, affine right-hand sides, objective
-   orientation, complex-to-real PSD packing, and exact mapping from scalar rows
-   to JuMP variables. This requires a versioned contract extension beyond
-   `core_mgk`.
-4. Only then extend `gap_status_runner_lib.jl` with a Square point. The source
+1. Extend `SharedCoreWire.jl` with block, coefficient, wiring, coverage, and
+   source-evidence records, then add `emit_square_core_inventory.jl`. It must
+   serialize all 247,540 component records, recompute pair/component coverage,
+   and produce a gamma-independent canonical math hash plus envelope.
+2. Add a conic-render envelope binding the core math hash, exact gamma,
+   normalization/stationarity row IDs, real cone coordinates, MOF SHA, source
+   commit, and environment.
+3. Extend `gap_status_runner_lib.jl` with a Square point. The source
    gate must bind the Hamiltonian, `L`, `d`, basis manifests, core math hash,
    conic-render hash, state class, exact γ, environment, and output MOF. Raw
    solver status remains `unknown` unless an independently replayed witness or

@@ -1,9 +1,10 @@
 # Solver-free validation report
 
-No Square J1-J2 conic model was assembled or solved. The checks below cover
-geometry, exact Pauli algebra, basis identity, exact `M/G/K` pair coefficients,
-exported-ray replay, and certificate post-processing. Solver status by itself
-is never promoted to a physical gap claim.
+A Square J1-J2 conic feasibility model is now assembled and independently
+parsed without optimization. The checks below cover geometry, exact Pauli
+algebra, basis identity, exact `M/G/K` coefficients, canonical bytes, conic
+rendering, exported-ray replay, and certificate post-processing. Solver status
+by itself is never promoted to a physical gap claim.
 
 ## Julia unit suite
 
@@ -12,7 +13,7 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `589/589` checks passed without optimization.
+Result on Julia 1.11.9: `624/624` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier   59
@@ -26,6 +27,9 @@ storage estimates                             2
 exact local spin identities                  22
 generic solver-free problem adapter          43
 structured basis manifests                  100
+shared core canonical wire grammar           15
+complex Hermitian to real PSD rendering        5
+solver-free Square conic render               15
 exact core M/G/K pair algebra                23
 Square J1-J2 core M/G/K source gate         125
 small finite-patch ED construction oracle     3
@@ -47,6 +51,17 @@ references 74,602 canonical scalar rows and invokes no solver.
 The separate `H=Z`, basis `[X,Y]` fixture fixes the symmetrized commutator and
 complex-packing signs. Float Hamiltonian coefficients and unapplied symmetry
 metadata are rejected.
+
+## Square conic preflight
+
+The exact `L=1,d=2,g=1/2,gamma=1/10` source plan rendered in 6m38s to a
+25 MiB MOF artifact with SHA-256
+`8cc83c7ed497a940823b9b57433c3b6b50f2aaa20ae9330746fa0ba0ede60685`.
+It contains 74,602 scalar variables, `L(1)=1`, three nonzero stationarity
+equalities, complex PSD blocks 703 and 7 rendered as real PSD blocks 1406 and
+14, and a feasibility objective. Independent MOI parsing recovered 74,602
+variables, four equalities, and the two expected PSD dimensions.
+Both emitter and reader report that optimization was not invoked.
 
 ## Small ED oracle
 
@@ -72,9 +87,9 @@ estimate.
 
 ## Remaining boundary
 
-- canonical shared-core byte records, IDs, envelope, and full tensor artifact;
-- Square normalization, stationarity, affine right-hand sides, objective, and
-  complex-to-real cone rendering;
+- canonical shared-core block/wiring/coverage records, envelope, and full tensor
+  artifact (the scalar grammar and term/basis/row IDs are complete);
+- a conic-render envelope binding the exact source to the emitted MOF;
 - a source-gated Square MOF/status runner and independent conic replay;
 - any strictly audited Square infeasibility ray and resulting bulk-gap bound.
 

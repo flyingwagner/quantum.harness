@@ -32,9 +32,24 @@ end
 function print_inventory(model)
     model_inventory = inventory(model)
     println("variables\t", model_inventory.variables)
+    psd_dimensions = Int[]
     for row in model_inventory.constraints
         println("constraint_type\t", row.function_type, '\t', row.set_type, '\t', row.count)
     end
+    for constraint_type in MOI.get(model, MOI.ListOfConstraintTypesPresent())
+        function_type, set_type = constraint_type
+        set_type <: MOI.PositiveSemidefiniteConeTriangle || continue
+        for constraint in MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{function_type,set_type}(),
+        )
+            push!(
+                psd_dimensions,
+                MOI.get(model, MOI.ConstraintSet(), constraint).side_dimension,
+            )
+        end
+    end
+    println("psd_dimensions\t", join(psd_dimensions, ','))
 end
 
 function safe_status(optimizer, attribute, fallback)

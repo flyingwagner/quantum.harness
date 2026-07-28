@@ -64,10 +64,15 @@ implementation branch.
   versioned Square basis rows and hashes.
 - [`SQUARE_CORE_MGK.md`](SQUARE_CORE_MGK.md): exact Square `M/G/K` pair algebra,
   full solver-free pair-coverage gate, and the remaining conic-runner boundary.
+- [`SHARED_CORE_WIRE.md`](SHARED_CORE_WIRE.md): canonical typed bytes and
+  domain-separated content IDs shared by source and audit implementations.
+- [`SQUARE_CONIC_RENDER.md`](SQUARE_CONIC_RENDER.md): exact normalization,
+  stationarity, real PSD embedding, solver-free MOF command, and measured
+  `L=1,d=2` inventory.
 
-The geometry/model prototype uses Julia standard libraries only and does not
-assemble or solve an SDP. The audit utilities use the declared JuMP/MOI file
-API to parse exported models but invoke no optimizer. The external
+The geometry/model layer uses exact arithmetic. The Square source gate can now
+assemble and serialize a conic feasibility model through the declared JuMP/MOI
+file API without invoking an optimizer. The external
 Mosek/SpectralGap/QMBCertify environment reported in [`notes/`](notes/) is a
 separate solver setup; its local patches must be committed and
 regression-tested before this repository can rely on them.

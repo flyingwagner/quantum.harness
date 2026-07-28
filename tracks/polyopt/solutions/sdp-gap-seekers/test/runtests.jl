@@ -610,6 +610,176 @@ end
 
 include(joinpath(@__DIR__, "..", "src", "CoreMGK.jl"))
 using .CoreMGK
+include(joinpath(@__DIR__, "..", "src", "SharedCoreWire.jl"))
+using .SharedCoreWire
+
+@testset "shared core canonical wire grammar" begin
+    grammar_hex =
+        "4149434f5245310a4f343a53343a666c616742313b53353a6c6162656c" *
+        "53343a783a790a53343a6e6f6e654e3b53363a76616c7565734c333a49" *
+        "303b492d323b51312f323b0a"
+    grammar_bytes = hex2bytes(grammar_hex)
+    @test length(grammar_bytes) == 70
+    @test bytes2hex(sha256(grammar_bytes)) ==
+          "b75e0d4cab1d35247d2f654bd9c65566cac050be7202baadbf82c42120958975"
+    grammar_value = decode_math_bytes(grammar_bytes)
+    @test canonical_math_bytes(grammar_value) == grammar_bytes
+
+    hz_hex =
+        "4149434f5245310a4f383a5331323a675f70726f647563745f7879432d31" *
+        "2f312c302f313b53363a675f7a5f787943302f312c312f313b53363a6b5f" *
+        "695f787943302f312c2d322f313b53363a6d5f7a5f787943302f312c312f" *
+        "313b5331373a7061636b5f675f70726f647563745f7265512d322f313b53" *
+        "31313a7061636b5f675f7a5f696d51322f313b5331313a7061636b5f6b5f" *
+        "695f696d512d342f313b5331313a7061636b5f6d5f7a5f696d51322f313b" *
+        "0a"
+    hz_bytes = hex2bytes(hz_hex)
+    @test length(hz_bytes) == 181
+    @test bytes2hex(sha256(hz_bytes)) ==
+          "4c8f8281c27eee74f10dac79b0861c256f46bece9b49f6204bbfd01503970ad4"
+    @test canonical_math_bytes(decode_math_bytes(hz_bytes)) == hz_bytes
+
+    @test_throws ErrorException decode_math_bytes(
+        Vector{UInt8}(codeunits("AICORE1\nO2:S1:bI1;S1:aI2;\n")),
+    )
+    @test_throws ErrorException decode_math_bytes(
+        Vector{UInt8}(codeunits("AICORE1\nQ2/2;\n")),
+    )
+    @test_throws ArgumentError canonical_math_bytes(Dict("x" => 0.5))
+    @test_throws ArgumentError canonical_math_bytes(("not", "a", "list"))
+
+    _, x_word = pauli_word([(2, :X)])
+    _, y_word = pauli_word([(1, :Y)])
+    monomial = StateMonomial([x_word], y_word)
+    scalar_row = ScalarMoment([x_word, y_word])
+    @test startswith(term_id(x_word), "h:")
+    @test startswith(entry_id(monomial), "be:")
+    @test startswith(row_id(scalar_row), "row:")
+    @test term_id(x_word) != term_id(x_word; site_namespace="legacy")
+    reversed_row = ScalarMoment([y_word, x_word])
+    @test row_id(scalar_row) == row_id(reversed_row)
+end
+
+include(joinpath(@__DIR__, "..", "src", "SquareGapConic.jl"))
+using .SquareGapConic
+import JuMP
+
+@testset "complex Hermitian to real PSD rendering" begin
+    one = BigInt(1) // BigInt(1)
+    two = BigInt(2) // BigInt(1)
+    @test realify_hermitian_coefficient(
+        GaussianRational(one, two),
+        1,
+        2,
+        2,
+    ) == [
+        (1, 2, one),
+        (3, 4, one),
+        (1, 4, -two),
+        (2, 3, two),
+    ]
+    @test realify_hermitian_coefficient(
+        GaussianRational(one, zero(one)),
+        1,
+        1,
+        2,
+    ) == [(1, 1, one), (3, 3, one)]
+    @test isempty(realify_hermitian_coefficient(
+        zero(GaussianRational),
+        1,
+        2,
+        2,
+    ))
+    @test_throws ArgumentError realify_hermitian_coefficient(
+        GaussianRational(one, one),
+        1,
+        1,
+        2,
+    )
+    @test_throws ArgumentError realify_hermitian_coefficient(
+        GaussianRational(one, zero(one)),
+        2,
+        1,
+        2,
+    )
+end
+
+@testset "solver-free Square conic render" begin
+    problem = GapProblem(
+        square_patch_geometry(1),
+        square_j1j2_model(1 // 2),
+        1 // 10,
+        2;
+        basis_mode=:structured,
+        basis_spec=StructuredBasisSpec(:one_symbol_lift, 1),
+    )
+    source = core_mgk_plan(problem)
+    one = BigInt(1) // BigInt(1)
+    identity = ScalarMoment(PauliWord[])
+    plan = SquareConicPlan(
+        source,
+        BigInt(1) // BigInt(10),
+        [identity],
+        [row_id(identity)],
+        ExactAffineConstraint(:normalization, "L(1)=1", [1 => one], one),
+        ExactAffineConstraint[],
+        7,
+        0,
+        [
+            RealPSDPlan(:positive, 1, 2, [RealPSDTerm(1, 1, one)]),
+            RealPSDPlan(:gap, 1, 2, [RealPSDTerm(1, 1, one)]),
+        ],
+        :feasibility,
+        Pair{Int,Rational{BigInt}}[],
+    )
+    @test plan.gamma == BigInt(1) // BigInt(10)
+    @test plan.normalization.rhs == BigInt(1) // BigInt(1)
+    @test plan.stationarity_selector_entries == 7
+    @test isempty(plan.stationarity)
+    @test plan.stationarity_exact_duplicates_removed == 0
+    @test plan.objective_sense == :feasibility
+    @test isempty(plan.objective_terms)
+    @test [block.complex_dimension for block in plan.psd_blocks] == [1, 1]
+    @test [block.real_dimension for block in plan.psd_blocks] == [2, 2]
+
+    mktempdir() do directory
+        path = joinpath(directory, "tiny-square.mof.json")
+        rendered = render_mof(plan, path)
+        @test rendered.optimizer_invoked == false
+        model = JuMP.MOI.FileFormats.Model(filename=path)
+        JuMP.MOI.read_from_file(model, path)
+        @test JuMP.MOI.get(model, JuMP.MOI.ObjectiveSense()) ==
+              JuMP.MOI.FEASIBILITY_SENSE
+        @test length(JuMP.MOI.get(
+            model,
+            JuMP.MOI.ListOfVariableIndices(),
+        )) == length(plan.rows)
+        equalities = JuMP.MOI.get(
+            model,
+            JuMP.MOI.ListOfConstraintIndices{
+                JuMP.MOI.ScalarAffineFunction{Float64},
+                JuMP.MOI.EqualTo{Float64},
+            }(),
+        )
+        @test length(equalities) == 1
+        @test JuMP.MOI.get(
+            model,
+            JuMP.MOI.ConstraintSet(),
+            only(equalities),
+        ).value == 1.0
+        psd_constraints = JuMP.MOI.get(
+            model,
+            JuMP.MOI.ListOfConstraintIndices{
+                JuMP.MOI.VectorAffineFunction{Float64},
+                JuMP.MOI.PositiveSemidefiniteConeTriangle,
+            }(),
+        )
+        @test [
+            JuMP.MOI.get(model, JuMP.MOI.ConstraintSet(), constraint).side_dimension
+            for constraint in psd_constraints
+        ] == [2, 2]
+    end
+end
 
 function exact_component_map(components, name)
     component = only(filter(record -> record.component == name, components))
