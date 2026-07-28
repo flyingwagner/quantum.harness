@@ -79,6 +79,12 @@ rebuild, invalid Git/hash identity, dirty tracked source, incomplete core
 coverage, or a mismatched MOF audit. Its emitted status is always `unsolved`;
 the envelope cannot report a Square gap bound.
 
+The complete audit at source `e5c5249` rebuilt and matched the core, replayed
+all MOF coefficients, and wrote a canonical 1,885-byte envelope with SHA-256
+`6f8d97f69a3e1f3aabc9b41fed5826573f81e25bf62a108922ecf944c57a3989`
+in 1154.82s. Independent decode/reencode was byte-identical. The embedded
+claim remains `source-gated conic model; no Square bulk-gap bound`.
+
 ## Canonical Square core inventory
 
 The complete native `core_mgk` artifact contains 161,886,794 canonical bytes,

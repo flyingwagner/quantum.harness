@@ -41,6 +41,34 @@ Output is write-once: a completed same-directory temporary file is published
 by an atomic hard link, and an existing or concurrently created destination is
 rejected without modification.
 
+## Measured source-bound result
+
+The completed solver-free audit used:
+
+- source commit `e5c5249047cd0df7c6387483ee2e745eabed2514`;
+- source tree `3a13ccb1089d0e5dfc0763c5cc463d4bf23e9bdc`;
+- core math SHA
+  `1d466cea7256a71d03d50f84d58f2d088d69360bfeb5b18161108d10c16e8549`;
+- core envelope SHA
+  `8944d5e41afd77a187678a2a3981c898ec9cce4772592fd28e3eb623ccec66f5`;
+- MOF SHA
+  `8cc83c7ed497a940823b9b57433c3b6b50f2aaa20ae9330746fa0ba0ede60685`.
+
+The complete core source rebuild matched, every MOF coefficient replayed, and
+no optimizer was invoked. The 1,885-byte output is:
+
+```text
+.bohr-handoff/square-l1-d2-g0p5-gamma0p1.aisqstatus
+SHA-256 6f8d97f69a3e1f3aabc9b41fed5826573f81e25bf62a108922ecf944c57a3989
+```
+
+Wall time was 1154.82s. An independent decode/canonical-reencode was
+byte-identical and recovered `status=unsolved`,
+`optimizer_invoked=false`, and the same source commit and claim boundary.
+The first full audit at source `46b7bd8` passed every mathematical gate but
+failed only because Julia does not support `open(path,"x")`; it created no
+output. The atomic hard-link publisher fixed that isolated failure.
+
 ## Interpretation boundary
 
 The hard-coded status is `unsolved`, and the claim boundary is
