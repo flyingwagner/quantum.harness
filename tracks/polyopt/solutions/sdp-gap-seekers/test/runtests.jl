@@ -182,6 +182,20 @@ end
     @test first_result.sha256 == second_result.sha256
     @test length(first_result.sha256) == 64
     @test startswith(String(first_result.bytes), "AISQSTATUS1")
+    mktempdir() do directory
+        status_path = joinpath(directory, "fixture.aisqstatus")
+        @test write_square_status_envelope(
+            status_path,
+            first_result,
+        ) == status_path
+        @test read(status_path) == first_result.bytes
+        @test_throws ErrorException write_square_status_envelope(
+            status_path,
+            second_result,
+        )
+        @test read(status_path) == first_result.bytes
+        @test readdir(directory) == ["fixture.aisqstatus"]
+    end
     @test_throws ErrorException build_square_status_envelope(
         identity;
         source_commit=repeat("b", 39),

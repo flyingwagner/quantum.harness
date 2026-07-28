@@ -37,7 +37,9 @@ julia --project=julia-env --startup-file=no --history-file=no \
 ```
 
 For an ordinary checkout, replace `.bohr-handoff/local-git` with `.git`.
-Output is write-once: an existing destination is rejected.
+Output is write-once: a completed same-directory temporary file is published
+by an atomic hard link, and an existing or concurrently created destination is
+rejected without modification.
 
 ## Interpretation boundary
 

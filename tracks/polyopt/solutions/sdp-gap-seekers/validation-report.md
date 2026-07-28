@@ -13,14 +13,14 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `729/729` checks passed without optimization.
+Result on Julia 1.11.9: `734/734` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier  128
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
-Square status envelope fail-closed contract  16
+Square status envelope fail-closed contract  21
 Pauli canonicalization                       10
 bare Pauli basis counts                      72
 full state-polynomial formal counts          13

@@ -152,9 +152,22 @@ function build_square_status_envelope(
 end
 
 function write_square_status_envelope(path::AbstractString, result)
-    ispath(path) && error("refusing to overwrite status envelope: $path")
-    open(path, "x") do io
+    destination = abspath(path)
+    ispath(destination) &&
+        error("refusing to overwrite status envelope: $path")
+    mkpath(dirname(destination))
+    temporary, io = mktemp(dirname(destination))
+    try
         write(io, result.bytes)
+        close(io)
+        # Linking a completed same-filesystem temporary file is atomic and
+        # fails if another process created the destination after the check.
+        Base.Filesystem.hardlink(temporary, destination)
+        rm(temporary)
+    catch
+        isopen(io) && close(io)
+        ispath(temporary) && rm(temporary)
+        rethrow()
     end
     return path
 end
