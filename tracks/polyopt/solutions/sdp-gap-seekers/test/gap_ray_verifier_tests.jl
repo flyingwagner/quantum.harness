@@ -511,5 +511,126 @@ end
             }(),
         )
         @test only(normalized_row_objective.terms).coefficient == 1.0
+
+        recession_model = RayMOI.Utilities.Model{Float64}()
+        recession_variables = RayMOI.add_variables(recession_model, 2)
+        recession_equality = RayMOI.add_constraint(
+            recession_model,
+            RayMOI.ScalarAffineFunction(
+                [
+                    RayMOI.ScalarAffineTerm(2.0, recession_variables[1]),
+                    RayMOI.ScalarAffineTerm(-1.0, recession_variables[2]),
+                ],
+                7.0,
+            ),
+            RayMOI.EqualTo(9.0),
+        )
+        recession_psd = RayMOI.add_constraint(
+            recession_model,
+            RayMOI.VectorAffineFunction(
+                [
+                    RayMOI.VectorAffineTerm(
+                        1,
+                        RayMOI.ScalarAffineTerm(
+                            1.0,
+                            recession_variables[1],
+                        ),
+                    ),
+                ],
+                [5.0],
+            ),
+            RayMOI.PositiveSemidefiniteConeTriangle(1),
+        )
+        recession_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(3.0, recession_variables[2])],
+            11.0,
+        )
+        RayMOI.set(
+            recession_model,
+            RayMOI.ObjectiveSense(),
+            RayMOI.MAX_SENSE,
+        )
+        RayMOI.set(
+            recession_model,
+            RayMOI.ObjectiveFunction{typeof(recession_objective)}(),
+            recession_objective,
+        )
+        recession_summary = normalize_recession_problem!(recession_model)
+        @test recession_summary.original_sense == RayMOI.MAX_SENSE
+        @test recession_summary.scalar_equalities == 1
+        @test recession_summary.affine_psd_blocks == 1
+        @test recession_summary.objective_terms == 1
+        homogeneous_equality = RayMOI.get(
+            recession_model,
+            RayMOI.ConstraintFunction(),
+            recession_equality,
+        )
+        @test homogeneous_equality.constant == 0.0
+        @test RayMOI.get(
+            recession_model,
+            RayMOI.ConstraintSet(),
+            recession_equality,
+        ).value == 0.0
+        homogeneous_psd = RayMOI.get(
+            recession_model,
+            RayMOI.ConstraintFunction(),
+            recession_psd,
+        )
+        @test homogeneous_psd.constants == [0.0]
+        normalization = RayMOI.get(
+            recession_model,
+            RayMOI.ConstraintFunction(),
+            recession_summary.normalization_constraint,
+        )
+        @test only(normalization.terms).coefficient == 3.0
+        @test RayMOI.get(
+            recession_model,
+            RayMOI.ConstraintSet(),
+            recession_summary.normalization_constraint,
+        ).value == 1.0
+        @test 2.0 * (1 / 6) - 1 / 3 == 0.0
+        @test 3.0 * (1 / 3) == 1.0
+        @test RayMOI.get(
+            recession_model,
+            RayMOI.ObjectiveSense(),
+        ) == RayMOI.FEASIBILITY_SENSE
+        feasibility_objective = RayMOI.get(
+            recession_model,
+            RayMOI.ObjectiveFunction{
+                RayMOI.ScalarAffineFunction{Float64},
+            }(),
+        )
+        @test isempty(feasibility_objective.terms)
+        @test feasibility_objective.constant == 0.0
+
+        minimum_recession_model = RayMOI.Utilities.Model{Float64}()
+        minimum_variable = RayMOI.add_variable(minimum_recession_model)
+        minimum_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(2.0, minimum_variable)],
+            4.0,
+        )
+        RayMOI.set(
+            minimum_recession_model,
+            RayMOI.ObjectiveSense(),
+            RayMOI.MIN_SENSE,
+        )
+        RayMOI.set(
+            minimum_recession_model,
+            RayMOI.ObjectiveFunction{typeof(minimum_objective)}(),
+            minimum_objective,
+        )
+        minimum_summary =
+            normalize_recession_problem!(minimum_recession_model)
+        minimum_normalization = RayMOI.get(
+            minimum_recession_model,
+            RayMOI.ConstraintFunction(),
+            minimum_summary.normalization_constraint,
+        )
+        @test only(minimum_normalization.terms).coefficient == -2.0
+        @test RayMOI.get(
+            minimum_recession_model,
+            RayMOI.ConstraintSet(),
+            minimum_summary.normalization_constraint,
+        ).value == 1.0
     end
 end

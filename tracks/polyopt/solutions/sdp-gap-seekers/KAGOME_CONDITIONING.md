@@ -190,3 +190,8 @@ another coordinate heuristic: explicitly construct the homogeneous recession
 system and normalize its improving objective to one. That turns existence of
 an improving ray into finite conic feasibility while preserving the exact
 mathematical certificate condition.
+
+That route is implemented by `normalize_mof_recession.jl` and documented in
+`NORMALIZED_RECESSION.md`. The solver-free Kagome prototype has 15,672
+equalities (the 15,671 homogeneous source rows plus one objective
+normalization), retains all nine PSD blocks, and invokes no optimizer.

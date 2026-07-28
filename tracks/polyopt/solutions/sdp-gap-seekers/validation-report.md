@@ -13,10 +13,10 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `671/671` checks passed without optimization.
+Result on Julia 1.11.9: `687/687` checks passed without optimization.
 
 ```text
-solver-free homogeneous conic-ray verifier   90
+solver-free homogeneous conic-ray verifier  106
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
@@ -40,7 +40,10 @@ solver-free status runner contract           58
 The homogeneous-ray fixtures distinguish accepted improving rays from equality,
 PSD, and objective-sign failures. They also cover affine recession directions,
 scale invariance, the Kagome-size cancellation pathology, and fail-closed
-validation of PSD-preserving diagonal-congruence variable maps.
+validation of PSD-preserving diagonal-congruence variable maps. Exact
+recession normalization tests cover affine constant removal, equality
+right-hand sides, PSD constants, maximization/minimization orientation,
+unit-improvement normalization, and a feasibility objective.
 
 ## Square exact-core gate
 

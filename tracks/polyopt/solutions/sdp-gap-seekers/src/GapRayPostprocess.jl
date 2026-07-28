@@ -23,6 +23,7 @@ export BigRational,
     float_psd_minima,
     rigorous_psd_proof,
     normalize_rational_ray,
+    normalize_recession_problem!,
     objective_improvement,
     private_pivot_rows,
     psd_block_scales,
@@ -480,6 +481,162 @@ function validate_congruence_scales(block_scales::AbstractVector{Float64})
             )
     end
     return nothing
+end
+
+function zero_constant(
+    function_value::MOI.ScalarAffineFunction{Float64},
+)
+    return MOI.ScalarAffineFunction(copy(function_value.terms), 0.0)
+end
+
+function zero_constants(
+    function_value::MOI.VectorAffineFunction{Float64},
+)
+    return MOI.VectorAffineFunction(
+        copy(function_value.terms),
+        zeros(Float64, length(function_value.constants)),
+    )
+end
+
+function scalar_affine_objective(
+    objective::MOI.VariableIndex,
+)
+    return MOI.ScalarAffineFunction(
+        [MOI.ScalarAffineTerm(1.0, objective)],
+        0.0,
+    )
+end
+
+function scalar_affine_objective(
+    objective::MOI.ScalarAffineFunction{Float64},
+)
+    return objective
+end
+
+"""
+Replace an affine conic optimization problem by its homogeneous recession
+system and fix the improving objective direction to unit magnitude.
+
+For maximization the added normalization is `c'x = 1`; for minimization it is
+`c'x = -1`. Thus the returned feasibility problem has a solution exactly when
+the original recession cone contains an improving direction. Affine
+constants and equality right-hand sides are removed, cone directions are
+preserved, and the objective becomes feasibility. Unsupported constraint
+types fail closed.
+"""
+function normalize_recession_problem!(model)
+    original_sense = MOI.get(model, MOI.ObjectiveSense())
+    original_sense in (MOI.MAX_SENSE, MOI.MIN_SENSE) ||
+        error("recession normalization requires min or max objective sense")
+    objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
+    objective = scalar_affine_objective(
+        MOI.get(model, MOI.ObjectiveFunction{objective_type}()),
+    )
+    isempty(objective.terms) &&
+        error("cannot normalize a zero improving objective")
+    all(term -> isfinite(term.coefficient), objective.terms) ||
+        error("objective contains a non-finite coefficient")
+
+    scalar_equalities = 0
+    zero_coordinates = 0
+    affine_psd_blocks = 0
+    direct_psd_blocks = 0
+    for (function_type, set_type) in MOI.get(
+        model,
+        MOI.ListOfConstraintTypesPresent(),
+    )
+        constraints = collect(MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{function_type,set_type}(),
+        ))
+        for constraint in constraints
+            function_value = MOI.get(
+                model,
+                MOI.ConstraintFunction(),
+                constraint,
+            )
+            set = MOI.get(model, MOI.ConstraintSet(), constraint)
+            if set isa MOI.EqualTo &&
+               function_value isa MOI.ScalarAffineFunction{Float64}
+                MOI.set(
+                    model,
+                    MOI.ConstraintFunction(),
+                    constraint,
+                    zero_constant(function_value),
+                )
+                MOI.set(
+                    model,
+                    MOI.ConstraintSet(),
+                    constraint,
+                    MOI.EqualTo(0.0),
+                )
+                scalar_equalities += 1
+            elseif set isa MOI.Zeros &&
+                   function_value isa MOI.VectorAffineFunction{Float64}
+                MOI.set(
+                    model,
+                    MOI.ConstraintFunction(),
+                    constraint,
+                    zero_constants(function_value),
+                )
+                zero_coordinates += length(function_value.constants)
+            elseif set isa MOI.Zeros &&
+                   function_value isa MOI.VectorOfVariables
+                zero_coordinates += length(function_value.variables)
+            elseif set isa MOI.PositiveSemidefiniteConeTriangle &&
+                   function_value isa MOI.VectorAffineFunction{Float64}
+                MOI.set(
+                    model,
+                    MOI.ConstraintFunction(),
+                    constraint,
+                    zero_constants(function_value),
+                )
+                affine_psd_blocks += 1
+            elseif set isa MOI.PositiveSemidefiniteConeTriangle &&
+                   function_value isa MOI.VectorOfVariables
+                direct_psd_blocks += 1
+            elseif set isa MOI.Reals
+                nothing
+            else
+                error(
+                    "recession normalization does not support $(typeof(function_value)) in $(typeof(set))",
+                )
+            end
+        end
+    end
+
+    orientation = original_sense == MOI.MAX_SENSE ? 1.0 : -1.0
+    normalization = MOI.ScalarAffineFunction(
+        [
+            MOI.ScalarAffineTerm(
+                orientation * term.coefficient,
+                term.variable,
+            )
+            for term in objective.terms
+        ],
+        0.0,
+    )
+    normalization_constraint =
+        MOI.add_constraint(model, normalization, MOI.EqualTo(1.0))
+    zero_objective = MOI.ScalarAffineFunction{Float64}(
+        MOI.ScalarAffineTerm{Float64}[],
+        0.0,
+    )
+    MOI.set(
+        model,
+        MOI.ObjectiveFunction{typeof(zero_objective)}(),
+        zero_objective,
+    )
+    MOI.set(model, MOI.ObjectiveSense(), MOI.FEASIBILITY_SENSE)
+    return (
+        original_sense=original_sense,
+        objective_terms=length(objective.terms),
+        scalar_equalities=scalar_equalities,
+        zero_coordinates=zero_coordinates,
+        affine_psd_blocks=affine_psd_blocks,
+        direct_psd_blocks=direct_psd_blocks,
+        normalization_constraint=normalization_constraint,
+    )
 end
 
 function scaled_function(

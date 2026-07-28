@@ -62,6 +62,8 @@ implementation branch.
   source-gated xH5 uniform-block/row conditioning result and rejection.
 - [`KAGOME_CONGRUENCE_RESULT.md`](KAGOME_CONGRUENCE_RESULT.md):
   PSD-preserving diagonal-congruence xH5 result and rejection.
+- [`NORMALIZED_RECESSION.md`](NORMALIZED_RECESSION.md): convert an unbounded
+  ray search into equivalent finite homogeneous conic feasibility.
 - [`KAGOME_AB_RESULT.md`](KAGOME_AB_RESULT.md): completed xH5
   original-versus-deduplicated solve and unchanged-tolerance replay.
 - [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,
