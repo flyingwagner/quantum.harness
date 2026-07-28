@@ -99,3 +99,23 @@ SHA-256 377dbc70028b6c97fcf6214346b9362d8ed8ac098365c04b81cc1fc3ca4f4c1b
 Acceptance requires `rows_compared=15671`,
 `coefficient_mismatches=0`, `objective=54944 => 1//1`,
 `optimizer_invoked=false`, and `source_assembly_equal=true`.
+
+## Fail-closed certificate envelope
+
+`materialize_kagome_certificate.py` binds the proof commit/tree, patched
+SpectralGap sources, immutable MOF, final exact ray, exact PSD transcript,
+source transcript, physical setup, and restricted-class qualifier into one
+canonical JSON envelope. It validates every expected SHA-256 and required
+audit verdict before writing, refuses overwrite, and supports a byte-exact
+verification mode.
+
+The generated envelope is:
+
+```text
+.bohr-handoff/kagome-n13-d3-lso5-gamma1p272.aisgapcert
+SHA-256 24ba98bde4f52c7c1e1aadbe761beeb9d5b99ce84a671c391776d9ec60ea7010
+size 3,261 bytes
+```
+
+Both materialization and an independent canonical rebuild reported success
+with `optimizer_invoked=false`.

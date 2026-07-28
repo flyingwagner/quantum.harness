@@ -49,6 +49,7 @@ using .SquareStatusEnvelope
     @test occursin("source_assembly_equal\\ttrue", audit_text)
     @test occursin("optimizer_invoked", audit_text)
     @test !occursin("optimize!", audit_text)
+
 end
 
 @testset "Kagome source-audit exact Pauli strengthening" begin
@@ -73,6 +74,22 @@ end
     @test occursin("strengthening_dimensions", audit_text)
     @test occursin("optimizer_invoked", audit_text)
     @test !occursin("optimize!", audit_text)
+
+    envelope_text = read(
+        joinpath(
+            @__DIR__,
+            "..",
+            "scripts",
+            "materialize_kagome_certificate.py",
+        ),
+        String,
+    )
+    @test occursin("PROOF_COMMIT", envelope_text)
+    @test occursin("validate_exact_audit", envelope_text)
+    @test occursin("validate_source_audit", envelope_text)
+    @test occursin("unrestricted_state_claim", envelope_text)
+    @test occursin("refusing to overwrite certificate", envelope_text)
+    @test !occursin("optimize!", envelope_text)
 end
 
 @testset "square patch geometry" begin
