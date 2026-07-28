@@ -13,10 +13,10 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `745/745` checks passed without optimization.
+Result on Julia 1.11.9: `792/792` checks passed without optimization.
 
 ```text
-solver-free homogeneous conic-ray verifier  139
+solver-free homogeneous conic-ray verifier  186
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
@@ -139,10 +139,14 @@ estimate.
   correction of 5,806 unique rows. Maximum matching covers all 4,978 coupled
   rows. FLINT then proves coefficient rank 4,978 modulo two primes on the
   complete exact rational core, hence full row rank over the rationals. Exact
-  modular RREF has now selected a nonsingular 4,978-column rational minor. An
-  exact correction exists and its coordinates can be constructed, but
-  preserving PSD membership is still unproved. No tolerance or physical setup
-  changed.
+  modular RREF selected a nonsingular 4,978-column rational minor.
+- Exact affine peeling plus a 150-coordinate affine-kernel repair now produces
+  a strict ray for the intended rational reconstruction of the immutable
+  Kagome MOF coefficients. All 15,671 rows vanish exactly, the objective is
+  `119089//14841408527 > 0`, and all nine PSD blocks pass exact-zero,
+  exact-kernel, and 256-bit directed-interval LDLᵀ proofs. This is an
+  exported-model certificate, not yet a source-bound physical gap claim; the
+  Kagome source assembly has not yet been independently reproduced.
 
 ## Remaining boundary
 

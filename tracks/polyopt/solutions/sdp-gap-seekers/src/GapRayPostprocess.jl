@@ -22,9 +22,11 @@ export BigRational,
     equality_conditioning,
     equilibrate_rows!,
     exact_residuals,
+    exact_block_matrix,
     extract_exact_problem,
     float_psd_minima,
     rigorous_psd_proof,
+    rigorous_psd_proof_with_exact_kernel,
     normalize_rational_ray,
     normalize_recession_problem!,
     objective_improvement,
@@ -32,6 +34,7 @@ export BigRational,
     psd_block_scales,
     ray_equilibration,
     ray_congruence_equilibration,
+    read_exact_ray_values,
     read_ray_values,
     read_scale_map,
     transform_ray,
@@ -1038,6 +1041,31 @@ function read_ray_values(path::AbstractString)
     return moi_indices, values
 end
 
+function read_exact_ray_values(path::AbstractString)
+    lines = readlines(path)
+    isempty(lines) && error("exact ray file is empty: $path")
+    lines[1] == "ordinal\tnumerator\tdenominator" ||
+        error("unexpected exact ray header")
+    values = BigRational[]
+    for (expected_ordinal, line) in enumerate(lines[2:end])
+        fields = split(line, '\t'; keepempty=true)
+        length(fields) == 3 ||
+            error("malformed exact ray row $expected_ordinal")
+        parse(Int, fields[1]) == expected_ordinal ||
+            error("non-canonical exact ray ordinal")
+        numerator_value = parse(BigInt, fields[2])
+        denominator_value = parse(BigInt, fields[3])
+        denominator_value > 0 ||
+            error("exact ray denominator must be positive")
+        value = numerator_value // denominator_value
+        numerator(value) == numerator_value &&
+            denominator(value) == denominator_value ||
+            error("exact ray value is not reduced")
+        push!(values, value)
+    end
+    return values
+end
+
 function read_scale_map(path::AbstractString)
     lines = readlines(path)
     isempty(lines) && error("scale map is empty")
@@ -1335,11 +1363,23 @@ function normalize_rational_ray(
 end
 
 function write_exact_ray(path::AbstractString, values::AbstractVector{BigRational})
-    open(path, "w") do io
+    destination = abspath(path)
+    ispath(destination) &&
+        error("refusing to overwrite exact ray: $path")
+    mkpath(dirname(destination))
+    temporary, io = mktemp(dirname(destination))
+    try
         println(io, "ordinal\tnumerator\tdenominator")
         for (ordinal, value) in enumerate(values)
             println(io, ordinal, '\t', numerator(value), '\t', denominator(value))
         end
+        close(io)
+        Base.Filesystem.hardlink(temporary, destination)
+        rm(temporary)
+    catch
+        isopen(io) && close(io)
+        ispath(temporary) && rm(temporary)
+        rethrow()
     end
     return path
 end
@@ -1641,10 +1681,14 @@ end
 down(f) = setrounding(f, BigFloat, RoundDown)
 up(f) = setrounding(f, BigFloat, RoundUp)
 
-interval(value::BigRational) = BFInterval(
-    BigFloat(value, RoundDown),
-    BigFloat(value, RoundUp),
-)
+function interval(value::BigRational)
+    directed = (
+        BigFloat(value, Base.MPFR.MPFRRoundDown),
+        BigFloat(value, Base.MPFR.MPFRRoundUp),
+    )
+    lower, upper = minmax(directed...)
+    return BFInterval(lower, upper)
+end
 
 Base.:+(left::BFInterval, right::BFInterval) = BFInterval(
     down(() -> left.lower + right.lower),
@@ -1703,9 +1747,13 @@ function interval_ldlt_positive_definite(matrix::Matrix{BigRational}; precision=
                 pivot = pivot - lkj * lkj * diagonal[j]
             end
             if pivot.lower <= 0
+                negative = pivot.upper < 0
                 return (
                     proved=false,
+                    proved_indefinite=negative,
                     failed_pivot=k,
+                    failed_pivot_lower=pivot.lower,
+                    failed_pivot_upper=pivot.upper,
                     pivot_lower_bounds=pivot_lower_bounds,
                 )
             end
@@ -1724,7 +1772,10 @@ function interval_ldlt_positive_definite(matrix::Matrix{BigRational}; precision=
         end
         return (
             proved=true,
+            proved_indefinite=false,
             failed_pivot=nothing,
+            failed_pivot_lower=nothing,
+            failed_pivot_upper=nothing,
             pivot_lower_bounds=pivot_lower_bounds,
         )
     end
@@ -1743,22 +1794,91 @@ function rigorous_psd_proof(block::PSDDirectionBlock, values::AbstractVector; pr
     end
     isempty(active_rows) && return (
         proved=true,
+        proved_indefinite=false,
         status="exact_zero",
         dimension=size(matrix, 1),
         active_dimension=0,
         exact_zero_rows=Tuple(zero_rows),
         failed_pivot=nothing,
+        failed_pivot_lower=nothing,
+        failed_pivot_upper=nothing,
         minimum_pivot_lower=Inf,
     )
     active = matrix[active_rows, active_rows]
     result = interval_ldlt_positive_definite(active; precision=precision)
     return (
         proved=result.proved,
-        status=result.proved ? "interval_ldlt_positive_semidefinite" : "interval_ldlt_failed",
+        proved_indefinite=result.proved_indefinite,
+        status=result.proved ?
+               "interval_ldlt_positive_semidefinite" :
+               result.proved_indefinite ?
+               "interval_ldlt_negative_pivot" :
+               "interval_ldlt_inconclusive",
         dimension=size(matrix, 1),
         active_dimension=length(active_rows),
         exact_zero_rows=Tuple(zero_rows),
         failed_pivot=result.failed_pivot,
+        failed_pivot_lower=result.failed_pivot_lower,
+        failed_pivot_upper=result.failed_pivot_upper,
+        minimum_pivot_lower=isempty(result.pivot_lower_bounds) ?
+                            -Inf :
+                            minimum(result.pivot_lower_bounds),
+    )
+end
+
+"""
+    rigorous_psd_proof_with_exact_kernel(matrix, kernel, removed_indices;
+                                         precision=256)
+
+Prove a rational symmetric matrix positive semidefinite when exact kernel
+vectors are known. `matrix * kernel` must vanish exactly, and the square
+submatrix of `kernel` on `removed_indices` must be nonsingular. Under those
+conditions the full matrix is congruent to its retained principal submatrix
+direct-summed with a zero block. Directed interval LDLᵀ proves the retained
+block positive definite.
+"""
+function rigorous_psd_proof_with_exact_kernel(
+    matrix::Matrix{BigRational},
+    kernel::Matrix{BigRational},
+    removed_indices::AbstractVector{<:Integer};
+    precision=256,
+)
+    size(matrix, 1) == size(matrix, 2) ||
+        error("matrix is not square")
+    size(kernel, 1) == size(matrix, 1) ||
+        error("kernel row count does not match matrix")
+    length(removed_indices) == size(kernel, 2) ||
+        error("removed-coordinate count does not match kernel dimension")
+    length(unique(removed_indices)) == length(removed_indices) ||
+        error("removed kernel coordinates must be unique")
+    all(index -> index in axes(matrix, 1), removed_indices) ||
+        error("removed kernel coordinate is out of range")
+    all(iszero, matrix * kernel) ||
+        error("declared vectors are not an exact matrix kernel")
+    removed_kernel = kernel[removed_indices, :]
+    !iszero(det(removed_kernel)) ||
+        error("removed kernel coordinates do not resolve the kernel")
+    retained = setdiff(collect(axes(matrix, 1)), removed_indices)
+    reduced = matrix[retained, retained]
+    result = interval_ldlt_positive_definite(
+        reduced;
+        precision=precision,
+    )
+    return (
+        proved=result.proved,
+        proved_indefinite=result.proved_indefinite,
+        status=result.proved ?
+               "exact_kernel_reduced_interval_ldlt_positive_semidefinite" :
+               result.proved_indefinite ?
+               "exact_kernel_reduced_interval_ldlt_negative_pivot" :
+               "exact_kernel_reduced_interval_ldlt_inconclusive",
+        dimension=size(matrix, 1),
+        kernel_dimension=size(kernel, 2),
+        active_dimension=length(retained),
+        removed_indices=Tuple(removed_indices),
+        failed_pivot=result.failed_pivot,
+        failed_pivot_lower=result.failed_pivot_lower,
+        failed_pivot_upper=result.failed_pivot_upper,
         minimum_pivot_lower=isempty(result.pivot_lower_bounds) ?
                             -Inf :
                             minimum(result.pivot_lower_bounds),

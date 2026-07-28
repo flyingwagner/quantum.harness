@@ -99,24 +99,18 @@ rank obstruction. That failed attempt is preserved in
 `.bohr-handoff/kagome-affine-coupled-matching-minor-rank.tsv`, SHA-256
 `c2cb2895e111d9968182a5e4c8fcf754662a9a005b347ac43eb9be29dfaaf06d`.
 
-## Remaining obstruction and smallest next experiment
+## Closed projection result and remaining source boundary
 
-Private-pivot correction alone cannot close this Kagome point. All 4,887
-duplicate copies belong to representatives in the coupled core, and 4,978
-unique equations remain jointly supported on 12,283 columns. Exact
-coefficient rank now shows that a rational affine correction exists for every
-rationalized residual.
+A later exact construction avoided the general 4,978-row solve: one
+rationalization cell already satisfied the coupled core exactly, reverse
+peeling solved the remaining rows, and an exact six-kernel perturbation
+repaired the only indefinite PSD block. Reconstructing the intended MOF
+coefficients then required 46 exact private-pivot corrections. The final ray
+has zero residual on all 15,671 rows, the positive exact objective
+`119089//14841408527`, and rigorous PSD proofs for all nine blocks.
 
-Existence is not yet a certificate: an arbitrary solution may destroy the
-very small strengthening-block PSD margins or the improving objective. The
-modular pivot-selection step is complete. The smallest next experiment is:
-
-1. form the selected exact rational 4,978×4,978 minor and solve its correction
-   system for a normalized supplied ray;
-2. reverse the exact leaf-peeling corrections;
-3. verify every one of the 15,671 original rational rows exactly and measure
-   objective change;
-4. test the corrected nine PSD blocks with directed interval factorization.
-
-The correction must retain a rigorously nonnegative cone margin. Full affine
-row rank alone does not change γ=1.272 from numerical unknown.
+The construction, artifact hashes, and replay command are in
+`KAGOME_EXACT_EXPORTED_MODEL_CERTIFICATE.md`. This closes the exported-model
+projection/PSD problem. γ=1.272 remains withheld as a physical bound until a
+separate source-assembly audit reproduces the Kagome rows, objective, all nine
+blocks, geometry, Hamiltonian convention, and sign-symmetric state class.

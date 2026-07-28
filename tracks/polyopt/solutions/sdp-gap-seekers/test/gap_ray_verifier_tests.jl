@@ -336,6 +336,143 @@ end
         @test occursin("--pivots-output", rank_minor_script)
         @test occursin("matrix.rref(inplace=True)", rank_minor_script)
         @test occursin("refusing to overwrite pivots", rank_minor_script)
+        scan_projection_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "scan_affine_projection.jl",
+            ),
+            String,
+        )
+        @test occursin("correct_with_affine_peeling", scan_projection_script)
+        @test occursin("initial_coupled_nonzero", scan_projection_script)
+        @test occursin("optimizer_invoked\\n", scan_projection_script)
+        @test !occursin("optimize!", scan_projection_script)
+        materialize_scan_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "materialize_affine_projection_scan.py",
+            ),
+            String,
+        )
+        @test occursin("refusing to overwrite manifest", materialize_scan_script)
+        min_norm_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "project_affine_core_min_norm.py",
+            ),
+            String,
+        )
+        @test occursin("core @ core.T", min_norm_script)
+        @test occursin("exact_projection\\tfalse", min_norm_script)
+        @test occursin("refusing to overwrite projected ray", min_norm_script)
+        rigorous_scan_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "scan_affine_projection_psd.jl",
+            ),
+            String,
+        )
+        @test occursin("rigorous_psd_proof", rigorous_scan_script)
+        @test occursin("proved_indefinite", rigorous_scan_script)
+        @test !occursin("optimize!", rigorous_scan_script)
+        repair_search_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "find_affine_psd_repair.jl",
+            ),
+            String,
+        )
+        @test occursin("Clarabel.Optimizer", repair_search_script)
+        @test occursin("MOI.ALMOST_OPTIMAL", repair_search_script)
+        @test occursin("numerical_candidate_only", repair_search_script)
+        @test occursin("rigorous_psd_proof", repair_search_script)
+        @test occursin(
+            "no rationalized repair direction is rigorously PSD",
+            repair_search_script,
+        )
+        translated_repair_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "repair_exact_ray_psd.jl",
+            ),
+            String,
+        )
+        @test occursin("BASE_EXACT_RAY.tsv", translated_repair_script)
+        @test occursin("base .+ repair", translated_repair_script)
+        @test occursin("all(proof -> proof.proved, proofs)", translated_repair_script)
+        @test occursin(
+            "no rationalized repaired ray passed every rigorous PSD block",
+            translated_repair_script,
+        )
+        kernel_repair_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "repair_exact_psd_kernel.jl",
+            ),
+            String,
+        )
+        @test occursin("exact_particular_solution", kernel_repair_script)
+        @test occursin("exact_pivot_columns", kernel_repair_script)
+        @test occursin("independent_action * transpose", kernel_repair_script)
+        @test occursin("trial_matrix * kernel", kernel_repair_script)
+        @test occursin("split(support_text, ';')", kernel_repair_script)
+        @test occursin("removed_indices = last.", kernel_repair_script)
+        @test occursin(
+            "rigorous_psd_proof_with_exact_kernel",
+            kernel_repair_script,
+        )
+        @test occursin("coefficient_tolerance", kernel_repair_script)
+        @test !occursin("optimize!", kernel_repair_script)
+        exact_audit_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "audit_exact_ray_psd.jl",
+            ),
+            String,
+        )
+        @test occursin(
+            "rigorous_psd_proof_with_exact_kernel",
+            exact_audit_script,
+        )
+        @test occursin("coefficient_tolerance", exact_audit_script)
+        coefficient_reconstruction_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "reconstruct_exact_ray_coefficients.jl",
+            ),
+            String,
+        )
+        @test occursin(
+            "correct_with_private_pivots",
+            coefficient_reconstruction_script,
+        )
+        @test occursin(
+            "all(iszero, final_residuals)",
+            coefficient_reconstruction_script,
+        )
+        @test occursin(
+            "objective_improvement(problem, corrected)",
+            coefficient_reconstruction_script,
+        )
+        @test !occursin("optimize!", coefficient_reconstruction_script)
         export_core_script = read(
             joinpath(
                 @__DIR__,
@@ -354,6 +491,12 @@ end
             only(exact_problem.psd_blocks),
             indefinite_candidate,
         ).proved
+        indefinite_proof = rigorous_psd_proof(
+            only(exact_problem.psd_blocks),
+            indefinite_candidate,
+        )
+        @test indefinite_proof.proved_indefinite
+        @test indefinite_proof.status == "interval_ldlt_negative_pivot"
 
         zero_row_block = PSDDirectionBlock(
             2,
@@ -369,10 +512,41 @@ end
         )
         @test zero_row_proof.proved
         @test zero_row_proof.exact_zero_rows == (2,)
+        large_negative = -(
+            (big(10)^400 + 1) // (big(10)^401 + 3)
+        )
+        large_negative_interval =
+            GapRayPostprocess.interval(large_negative)
+        @test large_negative_interval.lower <= BigFloat(large_negative)
+        @test BigFloat(large_negative) <= large_negative_interval.upper
+        @test large_negative_interval.lower <=
+              large_negative_interval.upper
+        singular_psd = BigRational[1 -1; -1 1]
+        singular_kernel = reshape(BigRational[1, 1], 2, 1)
+        singular_proof = rigorous_psd_proof_with_exact_kernel(
+            singular_psd,
+            singular_kernel,
+            [2],
+        )
+        @test singular_proof.proved
+        @test singular_proof.kernel_dimension == 1
+        @test singular_proof.active_dimension == 1
+        @test singular_proof.status ==
+              "exact_kernel_reduced_interval_ldlt_positive_semidefinite"
+        @test_throws ErrorException rigorous_psd_proof_with_exact_kernel(
+            singular_psd,
+            reshape(BigRational[1, 0], 2, 1),
+            [2],
+        )
 
         exact_path = joinpath(directory, "exact-ray.tsv")
         write_exact_ray(exact_path, exact_corrected)
         @test readlines(exact_path)[1] == "ordinal\tnumerator\tdenominator"
+        @test read_exact_ray_values(exact_path) == exact_corrected
+        @test_throws ErrorException write_exact_ray(
+            exact_path,
+            exact_corrected,
+        )
 
         duplicate_path = joinpath(directory, "duplicate.mof.json")
         deduplicated_path = joinpath(directory, "deduplicated.mof.json")
