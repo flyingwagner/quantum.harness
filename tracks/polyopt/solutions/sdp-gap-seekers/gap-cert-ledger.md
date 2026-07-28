@@ -37,33 +37,33 @@ statement **Δ ≤ γ_upper**.
 ## Current audited ledger
 
 The source solve is `b1a1cad`; the independent replay implementation is
-`8c6106f`. The Kagome row remains floating-point evidence. The TFIM row adds
-strict post-processing for the reconstructed rational conic model, but not yet
-an end-to-end formal physical bound.
+`8c6106f`. The Kagome row remains floating-point evidence. The TFIM row now
+combines strict rational/interval post-processing with an exact source-to-MOF
+coefficient audit.
 
 | model | config | numerical transition | independent evidence | conclusion |
 |---|---|---|---|---|
-| 1D TFIM | `N=9, g=0.5, d=2, lso=6`, sign-symmetric | `(0.25075,0.25125]` | γ=0.25125 ray projected onto 2,705 exact rational equalities; four PSD blocks proved by 256-bit directed interval LDLᵀ | strict certificate for the reconstructed conic model; source-assembly equivalence still blocks a formal physical Δ bound |
-| Kagome Heisenberg | `N=13, d=3, lso=5`, sign-symmetric | `(1.270,1.272]` | γ=1.272 ray rejected: normalized equality residual `6.6153e-11` at tolerance `1e-12`; variable scale `8.5896e16` | numerical instability; γ=1.272 is not infeasible or certified |
+| 1D TFIM | `N=9, g=0.5, d=2, lso=6`, sign- and reflection-symmetric | `(0.25075,0.25125]` | γ=0.25125 ray projected onto 2,705 exact rational equalities; four PSD blocks proved by 256-bit directed interval LDLᵀ; all 2,705 source rows/objective match exactly | `Δ_bulk ≤ 0.25125` for the declared symmetry-restricted KMS state class |
+| Kagome Heisenberg | `N=13, d=3, lso=5`, sign-symmetric | `(1.270,1.272]` | xH5 original/dedup rays rejected: normalized equality residuals `3.2457e-11` / `3.0798e-10` at tolerance `1e-12` | numerical instability; γ=1.272 is not infeasible or certified |
 
 ## Status (2026-07-28, certificate audit)
 
-- **TFIM:** exact rational projection and rigorous PSD membership now pass for
-  the reconstructed conic model. The remaining gate is equality between that
-  reconstruction and the intended state-polynomial assembly.
+- **TFIM:** exact rational projection and rigorous PSD membership pass. The
+  source audit reproduces the Hamiltonian support, sign/reflection state class,
+  matrix orientation, 136 stationarity variables, every affine coefficient
+  and right-hand side, four PSD blocks, and the `+λ` objective with zero
+  mismatches.
 - **Kagome:** the transition is numerical only. Do not move an upper bound
-  through γ=1.272; the available ray fails the equality audit. A solver-free
-  audit finds 4,887 exact duplicate equalities and about 20 orders of conic
-  block scale separation; exact deduplication is ready for an xH5 A/B solve.
+  through γ=1.272. The completed xH5 A/B confirms 4,887 exact duplicates
+  materially change cost, scale, and equality residual while preserving the
+  same stalled/unknown status; both rays fail replay.
 - **Square J1-J2:** exact structured-basis `M/G/K` coefficient assembly now
   passes its full `L=1,d=2,g=1/2` solver-free pair/Hermiticity gate. No conic
   status/audit runner or gap number exists yet.
 
 ## Open items
 
-1. Freeze and diff the TFIM source assembly against the intended rational
-   coefficient/support contract.
-2. Run the source-locked Kagome original-versus-deduplicated A/B experiment;
-   do not loosen the verifier tolerance.
-3. Connect the structured Square basis to a source-gated coefficient assembly
+1. Implement and exactly round-trip one predeclared Kagome block-equilibration
+   map before a further xH5 A/B; do not loosen the verifier tolerance.
+2. Connect the structured Square basis to a source-gated coefficient assembly
    and three-way status/audit runner.

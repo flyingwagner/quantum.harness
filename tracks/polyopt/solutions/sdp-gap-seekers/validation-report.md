@@ -12,10 +12,11 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `583/583` checks passed without optimization.
+Result on Julia 1.11.9: `589/589` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier   59
+TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
 Pauli canonicalization                       10
@@ -59,13 +60,15 @@ estimate.
 
 - The supplied TFIM γ=0.25125 ray passes independent floating replay. Exact
   rational equality projection and directed 256-bit interval LDLᵀ prove a
-  strict ray for the explicitly reconstructed rational conic model. Formal
-  physical certification still awaits the source-assembly coefficient gate.
-- The supplied Kagome γ=1.272 ray is rejected by normalized equality residual
-  `6.615275739340028e-11` at tolerance `1e-12`. High-precision row evaluation
-  confirms this is a ray defect, not Float64 summation. Exact removal of 4,887
-  duplicate affine rows preserves the rejection and is staged only as a fresh
-  xH5 conditioning A/B.
+  strict ray. The source audit independently reproduces all 2,705 exact affine
+  rows, zero right-hand sides, block orientation, and `+λ` objective with zero
+  mismatches. The resulting bound applies only to the declared sign- and
+  reflection-symmetric KMS state class.
+- The completed xH5 Kagome γ=1.272 original/dedup A/B returned
+  `SLOW_PROGRESS` / unknown for both cells. Independent replay rejected both
+  at `1e-12`, with normalized equality residuals `3.245719e-11` and
+  `3.079840e-10`. Deduplication reduced time, memory, and scale but did not
+  produce a certificate.
 
 ## Remaining boundary
 

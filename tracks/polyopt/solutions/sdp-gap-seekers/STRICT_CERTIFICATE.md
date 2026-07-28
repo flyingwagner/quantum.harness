@@ -50,13 +50,18 @@ three blocks are rigorously positive definite. The corrected rational ray is
 therefore a strict certificate for the explicitly reconstructed rational conic
 model.
 
-## Scope boundary
+## Source binding and scope
 
-This closes floating-point uncertainty in the exported finite conic model. It
-does **not by itself close the end-to-end physics proof**. Promoting it to a
-formal TFIM bulk-gap upper bound additionally requires a source-level audit
-showing that the exported support, block orientation, symmetry-restricted state
-class, and every reconstructed rational coefficient equal the intended
-state-polynomial relaxation. That assembly-equivalence gate remains open; in
-particular, the legacy source used low-precision coefficient containers and its
-shared coefficient inventory is not yet frozen.
+`TFIM_SOURCE_ASSEMBLY.md` now closes the source-assembly gate. Its solver-free
+audit recomputes all 2,705 affine rows from the source Hamiltonian, Pauli
+reduction, sign/reflection restrictions, covariance orientation, stationarity
+monomials, and `+λ` maximizing objective. Every reconstructed rational
+coefficient and zero right-hand side matches the exported MOF; the canonical
+row SHA-256 is
+`8ae45321ada0edbbc18f0761591cea6de6014e64c6e4a271f54181413b0aa88a`.
+
+The combined result is a strict infeasibility certificate for the locked
+`N=9,d=2,lso=6,γ=201/800` sign- and reflection-symmetric state-polynomial
+relaxation. It implies `Δ_bulk ≤ 0.25125` in that restricted infinite-volume
+KMS ground-state class. It is not an unrestricted-state TFIM statement and is
+not the finite/open-chain or pure-phase quasiparticle gap.

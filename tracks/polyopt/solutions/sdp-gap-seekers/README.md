@@ -53,10 +53,13 @@ implementation branch.
 - [`validation-report.md`](validation-report.md): tests, finite-patch ED oracle,
   and the precise boundary of what has not yet been certified.
 - [`STRICT_CERTIFICATE.md`](STRICT_CERTIFICATE.md): exact rational projection
-  and interval-PSD post-processing for the supplied TFIM conic ray, including
-  the remaining source-assembly proof boundary.
+  and interval-PSD post-processing for the supplied TFIM conic ray.
+- [`TFIM_SOURCE_ASSEMBLY.md`](TFIM_SOURCE_ASSEMBLY.md): coefficient-exact
+  source-to-MOF binding for the restricted TFIM relaxation.
 - [`KAGOME_CONDITIONING.md`](KAGOME_CONDITIONING.md): solver-free γ=1.272
   conditioning diagnosis and exact equality-deduplication experiment.
+- [`KAGOME_AB_RESULT.md`](KAGOME_AB_RESULT.md): completed xH5
+  original-versus-deduplicated solve and unchanged-tolerance replay.
 - [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,
   versioned Square basis rows and hashes.
 - [`SQUARE_CORE_MGK.md`](SQUARE_CORE_MGK.md): exact Square `M/G/K` pair algebra,

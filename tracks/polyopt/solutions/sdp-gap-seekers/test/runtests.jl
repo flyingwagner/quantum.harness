@@ -5,10 +5,41 @@ include(joinpath(@__DIR__, "..", "scripts", "verify_gap_ray.jl"))
 using .GapRayVerifier
 include(joinpath(@__DIR__, "..", "src", "GapRayPostprocess.jl"))
 using .GapRayPostprocess
+include(joinpath(@__DIR__, "..", "src", "TFIMSourceAudit.jl"))
+using .TFIMSourceAudit
 include(joinpath(@__DIR__, "gap_ray_verifier_tests.jl"))
 
 include(joinpath(@__DIR__, "..", "src", "SquareJ1J2Prototype.jl"))
 using .SquareJ1J2Prototype
+
+@testset "TFIM source-audit fail-closed row comparison" begin
+    one = BigInt(1) // BigInt(1)
+    half = BigInt(1) // BigInt(2)
+    expected = [
+        Dict{Int,Rational{BigInt}}(1 => one, 3 => -half),
+        Dict{Int,Rational{BigInt}}(),
+    ]
+    same = [
+        Dict{Int,Rational{BigInt}}(3 => -half, 1 => one),
+        Dict{Int,Rational{BigInt}}(),
+    ]
+    changed_sign = [
+        Dict{Int,Rational{BigInt}}(1 => one, 3 => half),
+        Dict{Int,Rational{BigInt}}(),
+    ]
+    missing_row = same[1:1]
+    @test isempty(row_mismatches(expected, same))
+    @test row_mismatches(expected, changed_sign) == [1]
+    @test row_mismatches(expected, missing_row) == [1, 2]
+
+    audit_text = read(
+        joinpath(@__DIR__, "..", "scripts", "audit_tfim_source_assembly.jl"),
+        String,
+    )
+    @test occursin("source_assembly_equal\\ttrue", audit_text)
+    @test occursin("optimizer_invoked", audit_text)
+    @test !occursin("optimize!", audit_text)
+end
 
 @testset "square patch geometry" begin
     for L in 1:4
