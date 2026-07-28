@@ -62,14 +62,17 @@ coefficient audit.
   and regressed to `7.0496e-11`. Unit-improvement homogeneous feasibility
   removed arbitrary scale but failed at `9.9912e-11`; row equilibration changed
   it only to `9.1335e-11`.
-- **Square J1-J2:** exact structured-basis `M/G/K` coefficient assembly now
-  passes its full `L=1,d=2,g=1/2` solver-free pair/Hermiticity gate. No conic
-  status/audit runner or gap number exists yet.
+- **Square J1-J2:** the exact `L=1,d=2,g=1/2,γ=1/10` source assembly,
+  structured-basis `M/G/K` core, conic render, and canonical status envelope
+  pass the solver-free audit. The envelope deliberately says `unsolved` and
+  `optimizer_invoked=false`; no Square gap number exists.
 
 ## Open items
 
-1. Stop conditioning variants. Any further Kagome certificate attempt must
-   exactly project the affine kernel and prove PSD preservation after
-   correction; do not loosen the verifier tolerance.
-2. Connect the structured Square basis to a source-gated coefficient assembly
-   and three-way status/audit runner.
+1. Stop conditioning variants. The Kagome coupled core has exact full row rank
+   and a coefficient-valid 4,978-column pivot minor; construct the exact
+   affine correction and prove PSD preservation without loosening the
+   verifier tolerance.
+2. Keep the Square status envelope distinct from a future immutable
+   solver-result envelope. A serious Square solve requires separately
+   ratified physical setup and witness replay.

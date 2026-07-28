@@ -13,10 +13,10 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `742/742` checks passed without optimization.
+Result on Julia 1.11.9: `745/745` checks passed without optimization.
 
 ```text
-solver-free homogeneous conic-ray verifier  136
+solver-free homogeneous conic-ray verifier  139
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
@@ -138,9 +138,11 @@ estimate.
   4,978-row, 12,283-column coupled rational core after exactly peelable
   correction of 5,806 unique rows. Maximum matching covers all 4,978 coupled
   rows. FLINT then proves coefficient rank 4,978 modulo two primes on the
-  complete exact rational core, hence full row rank over the rationals. An
-  exact correction exists, but preserving PSD membership is still unproved.
-  No tolerance or physical setup changed.
+  complete exact rational core, hence full row rank over the rationals. Exact
+  modular RREF has now selected a nonsingular 4,978-column rational minor. An
+  exact correction exists and its coordinates can be constructed, but
+  preserving PSD membership is still unproved. No tolerance or physical setup
+  changed.
 
 ## Remaining boundary
 

@@ -333,6 +333,9 @@ end
         )
         @test occursin("from flint import fmpz, nmod_mat", rank_minor_script)
         @test occursin("denominator_mod == 0", rank_minor_script)
+        @test occursin("--pivots-output", rank_minor_script)
+        @test occursin("matrix.rref(inplace=True)", rank_minor_script)
+        @test occursin("refusing to overwrite pivots", rank_minor_script)
         export_core_script = read(
             joinpath(
                 @__DIR__,

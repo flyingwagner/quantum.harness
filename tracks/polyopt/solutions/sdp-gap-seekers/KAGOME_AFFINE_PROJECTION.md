@@ -62,7 +62,9 @@ kagome-1.272/audit.mof.json.gz \
 python tracks/polyopt/solutions/sdp-gap-seekers/scripts/\
 rank_affine_matrix_mod.py \
   .bohr-handoff/kagome-affine-coupled-core.tsv \
-  1000000007 1000000009
+  1000000007 1000000009 \
+  --pivots-output \
+  .bohr-handoff/kagome-affine-coupled-core-pivots.tsv
 ```
 
 The Python script uses `python-flint==0.9.0` / FLINT 3.6.0. Installation and
@@ -75,6 +77,16 @@ Its SHA-256 is
 FLINT returned rank 4,978 modulo both 1,000,000,007 and 1,000,000,009 in
 185.34s. The rank log SHA-256 is
 `2fb8f81211e1a02a4c6f7becc36ed897d63bb1e7418c8c4f11f3f3066de28aa8`.
+
+A separate exact modular RREF over 1,000,000,007 selected 4,978 distinct
+coefficient-valid pivot columns in 121.91s. The canonical pivot table has
+SHA-256
+`8c7da3d6f68e5ad54e0caea9e460a21153fafd737ab5745b2845c6042580e1fb`;
+its log has SHA-256
+`450397fece31c7c952346d683d7aaf446d0d8d56c121e0ca04f312874209a543`.
+The selected rational square minor is nonsingular because its reduction
+modulo the prime is nonsingular. Pivot output is write-once: an existing
+destination is rejected.
 
 One full modular rank is already a proof of full row rank over the rationals:
 clearing denominators yields a row-size minor that is nonzero modulo the
@@ -97,13 +109,13 @@ rationalized residual.
 
 Existence is not yet a certificate: an arbitrary solution may destroy the
 very small strengthening-block PSD margins or the improving objective. The
-smallest next experiment is:
+modular pivot-selection step is complete. The smallest next experiment is:
 
-1. extract coefficient-valid pivot columns from modular echelon form rather
-   than the failed arbitrary matching minor;
-2. solve the correction equations by modular reconstruction, preferring
-   columns outside fragile PSD blocks and measuring correction size;
-3. verify every one of the 15,671 original rational rows exactly;
+1. form the selected exact rational 4,978×4,978 minor and solve its correction
+   system for a normalized supplied ray;
+2. reverse the exact leaf-peeling corrections;
+3. verify every one of the 15,671 original rational rows exactly and measure
+   objective change;
 4. test the corrected nine PSD blocks with directed interval factorization.
 
 The correction must retain a rigorously nonnegative cone margin. Full affine
