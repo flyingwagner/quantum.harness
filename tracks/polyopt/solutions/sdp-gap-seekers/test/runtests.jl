@@ -30,7 +30,10 @@ end
     @test !occursin("+using Clarabel", patch_text)
     @test !occursin("_select_optimizer", patch_text)
     @test bytes2hex(sha256(codeunits(patch_text))) ==
-          "5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947"
+          "332c0931ac810289aa3713af0948f259c01189270706af58b262d60d994d4abd"
+    @test occursin("MSK_IPAR_PTF_WRITE_SOLUTIONS", patch_text)
+    @test occursin("getsolutioninfo", patch_text)
+    @test occursin("equality_residual_relative", patch_text)
     @test occursin("_lambda_value = try", patch_text)
     @test occursin(
         "_lambda_value_available = !isnothing(_lambda_value)",
@@ -290,9 +293,9 @@ using .GapStatusRunner
     @test hamiltonian_metadata(kagome).fingerprint ==
           "d8276e59e709c7356c3a2ae25eae6de0bbee8920dfe9413fc7ff178c2f96b4ab"
     @test basis_metadata(tfim).fingerprint ==
-          "f8d08f081db884a9c4a070ba45764ed27a5d999e33e27b50edaad0ae1a888dfd"
+          "99d7938bd8758251042146de518b0a8d4234cebfee8a5ee2856bda569101acf3"
     @test basis_metadata(kagome).fingerprint ==
-          "71b0327f5bf7223c5f6ef71e6fb1d0d95c5a2d817deb77690fb621972f41af55"
+          "98b97cf96837c4b21ee24f6326eaf1d7bc1626a2cc880c5ccc131e327e56ff54"
 
     named = adapt_certify_result(
         (
@@ -301,6 +304,7 @@ using .GapStatusRunner
             primal=:INFEASIBILITY_CERTIFICATE,
             dual=:NO_SOLUTION,
             objective=1.25,
+            audit=(requested=false,),
         ),
     )
     @test named.adapter == "namedtuple-v1"
@@ -310,6 +314,7 @@ using .GapStatusRunner
     @test named.dual == "NO_SOLUTION"
     @test named.objective == 1.25
     @test named.objective_availability == "available"
+    @test named.solver_audit == (requested=false,)
 
     objective_missing = adapt_certify_result(
         (

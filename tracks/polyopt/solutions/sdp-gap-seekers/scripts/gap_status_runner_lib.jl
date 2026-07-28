@@ -21,7 +21,7 @@ const SCHEMA_VERSION = "gap-status-result-v1"
 const EXPECTED_HARNESS_BASE = "0d2d21bbbb690a49f5e3c3d8142e6f3cdb0c76f7"
 const EXPECTED_HARNESS_TREE = "840df11e4507de9a77e78acf22d4334b39759de9"
 const EXPECTED_PATCH_SHA256 =
-    "5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947"
+    "332c0931ac810289aa3713af0948f259c01189270706af58b262d60d994d4abd"
 const EXPECTED_SPECTRALGAP_COMMIT =
     "a1171c906ff2cc2901e58c2426397a2f68c32bb7"
 const EXPECTED_SPECTRALGAP_TREE =
@@ -32,7 +32,7 @@ const EXPECTED_SPECTRALGAP_FILES = Dict(
     "basicfunction.jl" =>
         "2095cf7401355f37e9d17915b3ab29d44712d8e40f750eb8449f8c294229b03a",
     "sdp.jl" =>
-        "b1fa2280cca51fca38154daf5c767f7538ab68c2297e673eef474da3505f0ccc",
+        "4ea362723bd7601e67db3bc27f21a4a11506791ce2b9b82cb7e4a60b0f6bae10",
     "strengthening.jl" =>
         "de56b12b17049f81f689d4caef193b9dfd3bf50061fc78b1bf1547a748f7c57b",
 )
@@ -380,6 +380,10 @@ function adapt_certify_result(raw)
                     "unavailable" : "available"
                 )
             ),
+            solver_audit=(
+                hasproperty(raw, :audit) ?
+                getproperty(raw, :audit) : nothing
+            ),
         )
     end
     if raw isa Integer
@@ -455,6 +459,10 @@ function result_record(
         dual=adapted.dual,
         objective=adapted.objective,
         objective_availability=adapted.objective_availability,
+        solver_audit=(
+            hasproperty(adapted, :solver_audit) ?
+            adapted.solver_audit : nothing
+        ),
         walltime=Float64(elapsed),
         walltime_unit="seconds",
         exception=exception,
