@@ -21,14 +21,14 @@ const SCHEMA_VERSION = "gap-status-result-v1"
 const EXPECTED_HARNESS_BASE = "0d2d21bbbb690a49f5e3c3d8142e6f3cdb0c76f7"
 const EXPECTED_HARNESS_TREE = "840df11e4507de9a77e78acf22d4334b39759de9"
 const EXPECTED_PATCH_SHA256 =
-    "562c65cc5b4aad9e600a03558d3d22830a50e25dc00a6c4cacae6e9f38ac4281"
+    "5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947"
 const EXPECTED_SPECTRALGAP_COMMIT =
     "a1171c906ff2cc2901e58c2426397a2f68c32bb7"
 const EXPECTED_SPECTRALGAP_TREE =
     "52d2b037c2275866d482a7dc531198d412c566e1"
 const EXPECTED_SPECTRALGAP_FILES = Dict(
     "SpectralGap.jl" =>
-        "ec0a8b4e723e0accaee33826bd6f2bb4eef82debaf3a9f9a9e51cc749fb7648f",
+        "940cd72b9c4bea39b6daaefd2b9797c54df450cb0afbfb4d9322b2df1b3838bb",
     "basicfunction.jl" =>
         "2095cf7401355f37e9d17915b3ab29d44712d8e40f750eb8449f8c294229b03a",
     "sdp.jl" =>

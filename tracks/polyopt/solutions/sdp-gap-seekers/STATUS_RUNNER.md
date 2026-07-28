@@ -7,9 +7,13 @@ physical meaning to `flag`.
 
 Source gate: SpectralGap base
 `a1171c906ff2cc2901e58c2426397a2f68c32bb7`, checked patch SHA-256
-`562c65cc5b4aad9e600a03558d3d22830a50e25dc00a6c4cacae6e9f38ac4281`,
+`5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947`,
+patched `src/SpectralGap.jl` SHA-256
+`940cd72b9c4bea39b6daaefd2b9797c54df450cb0afbfb4d9322b2df1b3838bb`,
 patched `src/sdp.jl` SHA-256
 `b1fa2280cca51fca38154daf5c767f7538ab68c2297e673eef474da3505f0ccc`.
+The patch intentionally adds no package dependency: in particular it does not
+import Clarabel, which is absent from SpectralGap's upstream `Project.toml`.
 
 ## Locked calculation
 
@@ -37,11 +41,18 @@ julia --startup-file=no --history-file=no \
 
 julia --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
+
+tracks/polyopt/solutions/sdp-gap-seekers/test/patch_replay.sh \
+  /path/to/SpectralGap
 ```
 
 `--dry-run` does not import SpectralGap and cannot construct a Mosek optimizer.
 The fixture tests exercise both the old integer result and the new `NamedTuple`
-result without loading SpectralGap or Mosek.
+result without loading SpectralGap or Mosek. The patch replay test checks the
+exact upstream commit/tree, applies the patch in a disposable clone, verifies
+all four source hashes, and confirms every package imported by
+`src/SpectralGap.jl` is declared in its own `Project.toml`. Omit the optional
+path to let the test clone the upstream repository.
 
 ## xH5 run sequence
 

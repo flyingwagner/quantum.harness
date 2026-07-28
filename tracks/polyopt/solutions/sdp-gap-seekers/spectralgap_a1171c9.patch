@@ -1,30 +1,6 @@
 diff --git a/src/SpectralGap.jl b/src/SpectralGap.jl
 old mode 100644
 new mode 100755
-index c384283..8b27a46
---- a/src/SpectralGap.jl
-+++ b/src/SpectralGap.jl
-@@ -3,10 +3,20 @@ module SpectralGap
- using MathOptInterface
- using JuMP
- using MosekTools
-+using Clarabel
- using LinearAlgebra
- 
- export ncpoly, certify_Ising_gap, certify_Ising_gap_nosignsymmetry, certify_Heisenberg_kagome_gap, certify_Heisenberg_kagome_gap_nosignsymmetry
- 
-+# Solver selection: Mosek if available (MOSEKBINDIR set), else Clarabel
-+function _select_optimizer()
-+    if haskey(ENV, "MOSEKBINDIR") || haskey(ENV, "MOSEK_PLATFORM")
-+        return Mosek.Optimizer
-+    else
-+        return Clarabel.Optimizer
-+    end
-+end
-+
- include("basicfunction.jl")
- include("sdp.jl")
- include("strengthening.jl")
 diff --git a/src/basicfunction.jl b/src/basicfunction.jl
 old mode 100644
 new mode 100755

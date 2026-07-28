@@ -3,7 +3,9 @@
 > **Historical legacy-run record.** The hashes below describe the earlier
 > integer-flag runs and are not the source gate for the raw-status rerun. The
 > safe runner in [`STATUS_RUNNER.md`](STATUS_RUNNER.md) uses the checked patch
-> SHA-256 `562c65cc5b4aad9e600a03558d3d22830a50e25dc00a6c4cacae6e9f38ac4281`
+> SHA-256 `5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947`
+> and patched `src/SpectralGap.jl` SHA-256
+> `940cd72b9c4bea39b6daaefd2b9797c54df450cb0afbfb4d9322b2df1b3838bb`
 > and patched `src/sdp.jl` SHA-256
 > `b1fa2280cca51fca38154daf5c767f7538ab68c2297e673eef474da3505f0ccc`;
 > it preserves raw statuses and protects unavailable objective values.

@@ -1,4 +1,5 @@
 using Test
+using SHA
 
 include(joinpath(@__DIR__, "..", "src", "SquareJ1J2Prototype.jl"))
 using .SquareJ1J2Prototype
@@ -26,6 +27,10 @@ end
 
     @test length(findall("_objv = try", patch_text)) == 4
     @test length(findall("_objv_available = !isnothing(_objv)", patch_text)) == 4
+    @test !occursin("+using Clarabel", patch_text)
+    @test !occursin("_select_optimizer", patch_text)
+    @test bytes2hex(sha256(codeunits(patch_text))) ==
+          "5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947"
     @test occursin("_lambda_value = try", patch_text)
     @test occursin(
         "_lambda_value_available = !isnothing(_lambda_value)",
@@ -268,9 +273,9 @@ using .GapStatusRunner
     @test hamiltonian_metadata(kagome).fingerprint ==
           "d8276e59e709c7356c3a2ae25eae6de0bbee8920dfe9413fc7ff178c2f96b4ab"
     @test basis_metadata(tfim).fingerprint ==
-          "47f03764c25af510833463339fa90acaf41f6a79bb15729a1b73eaed57bc4e54"
+          "f8d08f081db884a9c4a070ba45764ed27a5d999e33e27b50edaad0ae1a888dfd"
     @test basis_metadata(kagome).fingerprint ==
-          "adfbe4ef28077e71039ea1054bab956331297f14942b0b0b444aaba96905060e"
+          "71b0327f5bf7223c5f6ef71e6fb1d0d95c5a2d817deb77690fb621972f41af55"
 
     named = adapt_certify_result(
         (
