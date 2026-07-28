@@ -127,8 +127,11 @@ end
 
 function point_id(point::RunPoint)
     gamma = replace(canonical_decimal(point.gamma), "." => "p")
-    return point.model == :tfim ? "tfim-n9-g0p5-d2-lso6-gamma$gamma" :
-           "kagome-n13-d3-lso5-gamma$gamma"
+    if point.model == :tfim
+        g = replace(canonical_decimal(something(point.g)), "." => "p")
+        return "tfim-n$(point.N)-g$(g)-d$(point.d)-lso$(point.lso)-gamma$gamma"
+    end
+    return "kagome-n$(point.N)-d$(point.d)-lso$(point.lso)-gamma$gamma"
 end
 
 function run_spec_cell_id(index::Int)
@@ -187,6 +190,7 @@ function parse_point(
     g_text::Union{Nothing, AbstractString}=nothing,
     d_text::Union{Nothing, AbstractString}=nothing,
     lso_text::Union{Nothing, AbstractString}=nothing,
+    allow_experimental_gamma::Bool=false,
 )
     model = Symbol(lowercase(model_text))
     model in (:tfim, :kagome) ||
@@ -201,7 +205,8 @@ function parse_point(
         g == 1 // 2 || throw(ArgumentError("TFIM runner is locked to g=0.5"))
         d == 2 || throw(ArgumentError("TFIM runner is locked to d=2"))
         lso == 6 || throw(ArgumentError("TFIM runner is locked to lso=6"))
-        gamma in TFIM_GAMMAS ||
+        (allow_experimental_gamma && gamma > 0) ||
+            gamma in TFIM_GAMMAS ||
             throw(ArgumentError("TFIM gamma must be one of 0.25 or 0.26"))
         return RunPoint(:tfim, N, g, d, lso, gamma)
     end
@@ -214,7 +219,8 @@ function parse_point(
     N == 13 || throw(ArgumentError("Kagome runner is locked to N=13"))
     d == 3 || throw(ArgumentError("Kagome runner is locked to d=3"))
     lso == 5 || throw(ArgumentError("Kagome runner is locked to lso=5"))
-    gamma in KAGOME_GAMMAS ||
+    (allow_experimental_gamma && gamma > 0) ||
+        gamma in KAGOME_GAMMAS ||
         throw(ArgumentError("Kagome gamma must be one of 1, 1.2, 1.26, or 1.28"))
     return RunPoint(:kagome, N, nothing, d, lso, gamma)
 end
@@ -897,6 +903,7 @@ Usage:
   julia --project=ENV gap_status_runner.jl --run-spec PATH --cell-index 1 [--dry-run|--preflight] [--output PATH]
   julia --project=julia-env gap_status_runner.jl --model tfim --gamma 0.25 [--dry-run|--preflight] [--output PATH]
   julia --project=julia-env gap_status_runner.jl --model kagome --gamma 1.28 [--dry-run|--preflight] [--output PATH]
+  julia --project=julia-env gap_status_runner.jl --model tfim --gamma 0.258 --experimental-gamma [--output PATH]
   julia gap_status_runner.jl --list-points
 
 Locked cells:
@@ -907,6 +914,8 @@ Locked cells:
 --dry-run validates and fingerprints inputs without importing SpectralGap or
 calling Mosek. --preflight imports SpectralGap and verifies source/patch/
 Manifest fingerprints without constructing or optimizing a model.
+--experimental-gamma permits a positive gamma outside the six locked baseline
+cells while retaining the baseline model, N, d, lso, and source gates.
 """,
     )
 end
@@ -927,7 +936,13 @@ function parse_cli(args)
         "--run-spec",
         "--cell-index",
     ])
-    switch_options = Set(["--dry-run", "--preflight", "--list-points", "--help"])
+    switch_options = Set([
+        "--dry-run",
+        "--preflight",
+        "--list-points",
+        "--experimental-gamma",
+        "--help",
+    ])
     index = 1
     while index <= length(args)
         argument = args[index]
@@ -971,6 +986,8 @@ function main(args=ARGS)
     output = get(values, "--output", nothing)
 
     if "--list-points" in switches
+        "--experimental-gamma" in switches &&
+            throw(ArgumentError("--list-points does not accept --experimental-gamma"))
         point_options = intersect(
             Set(keys(values)),
             Set([
@@ -1015,6 +1032,8 @@ function main(args=ARGS)
         throw(ArgumentError("provide --run-spec/--cell-index or --model/--gamma"))
     run_spec_mode = haskey(values, "--run-spec") || haskey(values, "--cell-index")
     if run_spec_mode
+        "--experimental-gamma" in switches &&
+            throw(ArgumentError("run-spec mode does not accept --experimental-gamma"))
         haskey(values, "--run-spec") && haskey(values, "--cell-index") ||
             throw(ArgumentError("--run-spec and --cell-index must be used together"))
         point_args = intersect(
@@ -1039,6 +1058,7 @@ function main(args=ARGS)
             g_text=get(values, "--g", nothing),
             d_text=get(values, "--d", nothing),
             lso_text=get(values, "--lso", nothing),
+            allow_experimental_gamma="--experimental-gamma" in switches,
         )
     end
 

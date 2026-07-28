@@ -260,6 +260,23 @@ using .GapStatusRunner
     @test_throws ArgumentError parse_point("tfim", "0.25"; N_text="10")
     @test_throws ArgumentError parse_point("kagome", "1.28"; d_text="4")
     @test_throws ArgumentError parse_point("kagome", "1.28"; g_text="0.5")
+    tfim_scan = parse_point(
+        "tfim",
+        "0.258";
+        allow_experimental_gamma=true,
+    )
+    kagome_scan = parse_point(
+        "kagome",
+        "1.275";
+        allow_experimental_gamma=true,
+    )
+    @test point_id(tfim_scan) == "tfim-n9-g0p5-d2-lso6-gamma0p258"
+    @test point_id(kagome_scan) == "kagome-n13-d3-lso5-gamma1p275"
+    @test_throws ArgumentError parse_point(
+        "tfim",
+        "0";
+        allow_experimental_gamma=true,
+    )
 
     tfim_supports, tfim_coefficients = build_hamiltonian_data(tfim)
     kagome_supports, kagome_coefficients = build_hamiltonian_data(kagome)
