@@ -1,6 +1,10 @@
 using Test
 using SHA
 
+include(joinpath(@__DIR__, "..", "scripts", "verify_gap_ray.jl"))
+using .GapRayVerifier
+include(joinpath(@__DIR__, "gap_ray_verifier_tests.jl"))
+
 include(joinpath(@__DIR__, "..", "src", "SquareJ1J2Prototype.jl"))
 using .SquareJ1J2Prototype
 

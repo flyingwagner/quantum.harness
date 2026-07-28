@@ -37,10 +37,38 @@ function triangle_matrix(values::AbstractVector, side_dimension::Integer)
     return matrix
 end
 
-function direction_value(value_function, model, moi_function)
-    value = MOIU.eval_variables(value_function, model, moi_function)
-    origin = MOIU.eval_variables(_ -> 0.0, model, moi_function)
-    return value - origin
+function direction_value(value_function, _, variable::MOI.VariableIndex)
+    return value_function(variable)
+end
+
+function direction_value(value_function, _, variables::MOI.VectorOfVariables)
+    return value_function.(variables.variables)
+end
+
+function direction_value(value_function, _, affine::MOI.ScalarAffineFunction)
+    # Do not evaluate the affine function and subtract its value at the origin:
+    # that loses low-order bits when a large ray is combined with a nonzero
+    # constant. A recession direction contains the linear part only.
+    return sum(
+        term.coefficient * value_function(term.variable)
+        for term in affine.terms;
+        init=0.0,
+    )
+end
+
+function direction_value(value_function, _, affine::MOI.VectorAffineFunction)
+    values = zeros(Float64, MOI.output_dimension(affine))
+    for term in affine.terms
+        values[term.output_index] +=
+            term.scalar_term.coefficient *
+            value_function(term.scalar_term.variable)
+    end
+    return values
+end
+
+
+function direction_value(_, _, moi_function)
+    error("unsupported non-affine ray function: $(typeof(moi_function))")
 end
 
 function verify(
@@ -49,6 +77,10 @@ function verify(
     absolute_tolerance::Real=1e-12,
     relative_tolerance::Real=1e-12,
 )
+    isfinite(absolute_tolerance) && absolute_tolerance >= 0 ||
+        throw(ArgumentError("absolute_tolerance must be finite and nonnegative"))
+    isfinite(relative_tolerance) && relative_tolerance >= 0 ||
+        throw(ArgumentError("relative_tolerance must be finite and nonnegative"))
     model = MOI.FileFormats.Model(filename=String(model_path))
     MOI.read_from_file(model, String(model_path))
     variables = sort(
@@ -156,10 +188,12 @@ function verify(
     objective = MOI.get(model, MOI.ObjectiveFunction{objective_type}())
     objective_value = direction_value(value_function, model, objective)
     objective_sense = MOI.get(model, MOI.ObjectiveSense())
+    objective_sense in (MOI.MAX_SENSE, MOI.MIN_SENSE) ||
+        error("ray verification requires a maximization or minimization objective")
     improving_objective =
         objective_sense == MOI.MAX_SENSE ?
         objective_value :
-        objective_sense == MOI.MIN_SENSE ? -objective_value : 0.0
+        -objective_value
     min_psd_eigenvalue = psd_count == 0 ? NaN : min_psd_eigenvalue
     max_cone_violation = max(
         max_scalar_cone_violation,
@@ -168,12 +202,22 @@ function verify(
     max_equality_residual_relative = max_equality_residual / scale
     max_cone_violation_relative = max_cone_violation / scale
     improving_objective_relative = improving_objective / scale
-    verified =
-        max_equality_residual_relative <= normalized_tolerance &&
-        max_cone_violation_relative <= normalized_tolerance &&
-        improving_objective_relative > normalized_tolerance
+    equality_pass = max_equality_residual_relative <= normalized_tolerance
+    cone_pass = max_cone_violation_relative <= normalized_tolerance
+    objective_pass = improving_objective_relative > normalized_tolerance
+    verified = equality_pass && cone_pass && objective_pass
+    rejection_reasons = String[]
+    equality_pass || push!(rejection_reasons, "equality_residual")
+    cone_pass || push!(rejection_reasons, "cone_violation")
+    objective_pass || push!(rejection_reasons, "objective_direction")
     return (
         verified=verified,
+        verdict=verified ? "accepted_floating_point_ray" : "rejected",
+        rigor="floating_point_replay",
+        equality_pass=equality_pass,
+        cone_pass=cone_pass,
+        objective_pass=objective_pass,
+        rejection_reasons=Tuple(rejection_reasons),
         variable_count=length(variables),
         equality_count=equality_count,
         psd_count=psd_count,

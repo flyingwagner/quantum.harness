@@ -54,6 +54,25 @@ all four source hashes, and confirms every package imported by
 `src/SpectralGap.jl` is declared in its own `Project.toml`. Omit the optional
 path to let the test clone the upstream repository.
 
+## Independent exported-ray replay
+
+An exported MOF model and its `audit.variables.tsv` ray can be checked without
+constructing an optimizer or invoking Mosek:
+
+```bash
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/verify_gap_ray.jl \
+  /path/to/audit.mof.json.gz \
+  /path/to/audit.variables.tsv
+```
+
+Exit status `0` means the scale-normalized affine-recession, cone, and
+objective-direction checks all passed; `1` means at least one check failed.
+The output names each failed check. `accepted_floating_point_ray` is an
+independent floating-point replay, not an exact rational or interval proof.
+The model/ray pair and verifier source revision must remain part of the audit
+record.
+
 ## xH5 run sequence
 
 Before real submission, confirm the Hamiltonians above and probe the current
