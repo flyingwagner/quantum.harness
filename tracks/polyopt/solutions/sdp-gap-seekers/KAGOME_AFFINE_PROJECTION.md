@@ -47,26 +47,64 @@ Synthetic tests prove complete reverse correction on a triangular fixture and
 distinguish a full coupled matching from a structurally rank-deficient
 fixture.
 
-## Obstruction and smallest next experiment
+## Exact coefficient-rank proof
+
+The complete coupled coefficient matrix can be exported and ranked over prime
+fields:
+
+```bash
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/export_affine_coupled_core.jl \
+  .bohr-handoff/artifacts/certificate-audit-b1a1cad-20260728T102942Z/\
+kagome-1.272/audit.mof.json.gz \
+  .bohr-handoff/kagome-affine-coupled-core.tsv
+
+python tracks/polyopt/solutions/sdp-gap-seekers/scripts/\
+rank_affine_matrix_mod.py \
+  .bohr-handoff/kagome-affine-coupled-core.tsv \
+  1000000007 1000000009
+```
+
+The Python script uses `python-flint==0.9.0` / FLINT 3.6.0. Installation and
+wheel provenance are recorded in
+`.bohr-handoff/dependency-install-log.md`.
+
+The 4,978×12,283 export has 704,704 nonzero exact rational coefficients.
+Its SHA-256 is
+`18f10deccfcba97005ada3321599fc530c501255c990794cc70a2b0813f73c40`.
+FLINT returned rank 4,978 modulo both 1,000,000,007 and 1,000,000,009 in
+185.34s. The rank log SHA-256 is
+`2fb8f81211e1a02a4c6f7becc36ed897d63bb1e7418c8c4f11f3f3066de28aa8`.
+
+One full modular rank is already a proof of full row rank over the rationals:
+clearing denominators yields a row-size minor that is nonzero modulo the
+prime, hence nonzero over the integers and rationals. The second prime is an
+independent implementation check.
+
+The first attempt ranked only the arbitrary 4,978-column matching minor. It
+had rank 4,916 over both primes and therefore was a bad pivot selection, not a
+rank obstruction. That failed attempt is preserved in
+`.bohr-handoff/kagome-affine-coupled-matching-minor-rank.tsv`, SHA-256
+`c2cb2895e111d9968182a5e4c8fcf754662a9a005b347ac43eb9be29dfaaf06d`.
+
+## Remaining obstruction and smallest next experiment
 
 Private-pivot correction alone cannot close this Kagome point. All 4,887
 duplicate copies belong to representatives in the coupled core, and 4,978
-unique equations remain jointly supported on 12,283 columns. An exact
-certificate therefore needs a coefficient-rank-revealing solve of that sparse
-rational subsystem, followed by exact residual verification and a rigorous
-PSD proof after correction. Maximum bipartite matching covers all 4,978 rows,
-so the pattern has full structural row rank; exact coefficient cancellation
-is the remaining rank question.
+unique equations remain jointly supported on 12,283 columns. Exact
+coefficient rank now shows that a rational affine correction exists for every
+rationalized residual.
 
-The smallest next experiment is:
+Existence is not yet a certificate: an arbitrary solution may destroy the
+very small strengthening-block PSD margins or the improving objective. The
+smallest next experiment is:
 
-1. start from the complete structural matching and check the coefficient rank
-   of the 4,978×12,283 matrix modulo at least two large primes;
-2. solve the correction equations by modular reconstruction or fraction-free
-   sparse elimination;
+1. extract coefficient-valid pivot columns from modular echelon form rather
+   than the failed arbitrary matching minor;
+2. solve the correction equations by modular reconstruction, preferring
+   columns outside fragile PSD blocks and measuring correction size;
 3. verify every one of the 15,671 original rational rows exactly;
 4. test the corrected nine PSD blocks with directed interval factorization.
 
-Failure of modular full row rank would expose exact dependencies that must be
-removed first. Success still would not prove PSD membership; the correction
-must retain a rigorously nonnegative cone margin.
+The correction must retain a rigorously nonnegative cone margin. Full affine
+row rank alone does not change γ=1.272 from numerical unknown.

@@ -307,6 +307,44 @@ end
         )
         @test occursin("optimizer_invoked\\tfalse", projection_script)
         @test !occursin("optimize!", projection_script)
+        export_minor_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "export_affine_matching_minor.jl",
+            ),
+            String,
+        )
+        @test occursin(
+            "matching.full_row_structural_rank",
+            export_minor_script,
+        )
+        @test occursin("optimizer_invoked\\tfalse", export_minor_script)
+        @test !occursin("optimize!", export_minor_script)
+        rank_minor_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "rank_affine_matrix_mod.py",
+            ),
+            String,
+        )
+        @test occursin("from flint import fmpz, nmod_mat", rank_minor_script)
+        @test occursin("denominator_mod == 0", rank_minor_script)
+        export_core_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "export_affine_coupled_core.jl",
+            ),
+            String,
+        )
+        @test occursin("coupled_unique_row_indices", export_core_script)
+        @test occursin("optimizer_invoked\\tfalse", export_core_script)
+        @test !occursin("optimize!", export_core_script)
 
         indefinite_candidate = BigRational[1, 1, 2, 1]
         @test !rigorous_psd_proof(

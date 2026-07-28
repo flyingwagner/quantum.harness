@@ -219,6 +219,8 @@ duplicate copies belong to that coupled core, so it represents 9,865 of the
 This is the precise obstruction to reusing the TFIM private-pivot method.
 `KAGOME_AFFINE_PROJECTION.md` documents the solver-free command, artifact, and
 smallest next experiment. Maximum matching covers all 4,978 coupled rows, so
-the sparsity pattern has full row structural rank. Coefficient rank modulo
-multiple primes, exact rational correction, and interval PSD validation remain.
-This does not change the conclusion that γ=1.272 is unknown.
+the sparsity pattern has full row structural rank. The complete exact
+coefficient matrix also has rank 4,978 modulo both 1,000,000,007 and
+1,000,000,009, proving full row rank over the rationals. A correction exists,
+but it still needs controlled support/size plus exact residual and interval
+PSD validation. This does not change the conclusion that γ=1.272 is unknown.
