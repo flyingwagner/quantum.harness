@@ -500,7 +500,10 @@ function execute_point(
     end
 end
 
-function git_read(repo::AbstractString, args::Vector{String})
+function git_read(
+    repo::AbstractString,
+    args::AbstractVector{<:AbstractString},
+)
     try
         return readchomp(Cmd(["git", "-C", repo, args...]))
     catch
