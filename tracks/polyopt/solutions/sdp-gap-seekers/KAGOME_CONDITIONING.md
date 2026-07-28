@@ -79,6 +79,10 @@ Uniform row normalization also cannot validate this ray: the largest
 row-scaled residual is `5.200797932297734e-11`. Per-block positive rescaling is
 mathematically equivalent under a corresponding inverse coefficient scaling,
 but the appropriate factors require a fresh solver A/B and should not be
-chosen from a failed ray alone. The next-run plan therefore tests exact
-deduplication first and retains block equilibration as the next isolated
-experiment.
+chosen from a failed ray alone.
+
+The completed xH5 run is reported in `KAGOME_AB_RESULT.md`. Deduplication
+reduced solve time, peak memory, and ray scale, but both new rays were rejected
+for normalized equality residual at `1e-12`; the deduplicated residual was
+worse. One exactly round-tripped block-equilibration A/B is therefore the next
+isolated experiment.
