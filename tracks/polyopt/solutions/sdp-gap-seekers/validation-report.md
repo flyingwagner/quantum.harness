@@ -134,7 +134,7 @@ estimate.
   equality residual was `9.991206e-11`; it remains rejected.
 - Row-equilibrated unit-improvement job `22988265` changed that residual only
   to `9.133501e-11`; it too was rejected. The numerical conditioning cycle is
-  closed without a Kagome certificate.
+  closed without a certificate from any floating solver output.
 - Exact duplicate/leaf-column analysis reduces the Kagome affine system to a
   4,978-row, 12,283-column coupled rational core after exactly peelable
   correction of 5,806 unique rows. Maximum matching covers all 4,978 coupled

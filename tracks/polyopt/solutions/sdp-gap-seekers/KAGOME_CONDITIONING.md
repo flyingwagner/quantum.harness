@@ -227,4 +227,7 @@ the sparsity pattern has full row structural rank. The complete exact
 coefficient matrix also has rank 4,978 modulo both 1,000,000,007 and
 1,000,000,009, proving full row rank over the rationals. A correction exists,
 but it still needs controlled support/size plus exact residual and interval
-PSD validation. This does not change the conclusion that γ=1.272 is unknown.
+PSD validation. That boundary was subsequently closed by the exact kernel
+repair and source audit documented in
+`KAGOME_EXACT_EXPORTED_MODEL_CERTIFICATE.md` and
+`KAGOME_SOURCE_AUDIT.md`.
