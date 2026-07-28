@@ -66,6 +66,8 @@ implementation branch.
   ray search into equivalent finite homogeneous conic feasibility.
 - [`KAGOME_RECESSION_RESULT.md`](KAGOME_RECESSION_RESULT.md): xH5 result for
   the finite unit-improvement formulation and independent rejection.
+- [`KAGOME_RECESSION_ROW_RESULT.md`](KAGOME_RECESSION_ROW_RESULT.md):
+  row-equilibrated finite-feasibility result and conditioning stop decision.
 - [`KAGOME_AB_RESULT.md`](KAGOME_AB_RESULT.md): completed xH5
   original-versus-deduplicated solve and unchanged-tolerance replay.
 - [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,

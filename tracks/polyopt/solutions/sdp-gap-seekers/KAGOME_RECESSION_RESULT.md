@@ -57,7 +57,9 @@ High-precision diagnosis gives normalized equality residual
 `9.991153581879089e-11` and maximum row-scaled residual
 `2.4977883954697722e-11`, led by row 8,839 and the 17×17 block.
 
-The smallest distinct follow-up is row equilibration applied to the normalized
+The subsequent distinct test applied row equilibration to the normalized
 recession feasibility model, without variable scaling or duplicate removal.
 This preserves the same finite feasible set and isolates whether Mosek's row
-accuracy can cross the independent gate.
+accuracy can cross the independent gate. Job `22988265` improved the residual
+only to `9.133500587283089e-11` and was also rejected; see
+`KAGOME_RECESSION_ROW_RESULT.md`.

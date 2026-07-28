@@ -44,7 +44,7 @@ coefficient audit.
 | model | config | numerical transition | independent evidence | conclusion |
 |---|---|---|---|---|
 | 1D TFIM | `N=9, g=0.5, d=2, lso=6`, sign- and reflection-symmetric | `(0.25075,0.25125]` | γ=0.25125 ray projected onto 2,705 exact rational equalities; four PSD blocks proved by 256-bit directed interval LDLᵀ; all 2,705 source rows/objective match exactly | `Δ_bulk ≤ 0.25125` for the declared symmetry-restricted KMS state class |
-| Kagome Heisenberg | `N=13, d=3, lso=5`, sign-symmetric | `(1.270,1.272]` | original/dedup/uniform/congruence/unit-ray residuals `3.2457e-11` / `3.0798e-10` / `9.9149e-12` / `7.0496e-11` / `9.9912e-11` at tolerance `1e-12` | numerical instability; γ=1.272 is not infeasible or certified |
+| Kagome Heisenberg | `N=13, d=3, lso=5`, sign-symmetric | `(1.270,1.272]` | six equivalent formulations rejected; best residual `9.9149e-12`, row-scaled unit-ray `9.1335e-11`, at tolerance `1e-12` | numerical instability; γ=1.272 is not infeasible or certified |
 
 ## Status (2026-07-28, certificate audit)
 
@@ -60,15 +60,16 @@ coefficient audit.
   PSD-block/row scaling improved the original residual by about 3.3× but also
   stalled and failed replay at `9.9149e-12`. Diagonal congruence also stalled
   and regressed to `7.0496e-11`. Unit-improvement homogeneous feasibility
-  removed arbitrary scale but failed at `9.9912e-11`.
+  removed arbitrary scale but failed at `9.9912e-11`; row equilibration changed
+  it only to `9.1335e-11`.
 - **Square J1-J2:** exact structured-basis `M/G/K` coefficient assembly now
   passes its full `L=1,d=2,g=1/2` solver-free pair/Hermiticity gate. No conic
   status/audit runner or gap number exists yet.
 
 ## Open items
 
-1. Apply only positive row equilibration to the unit-improvement homogeneous
-   feasibility model; do not combine with variable scaling, deduplication, or
-   verifier-tolerance changes.
+1. Stop conditioning variants. Any further Kagome certificate attempt must
+   exactly project the affine kernel and prove PSD preservation after
+   correction; do not loosen the verifier tolerance.
 2. Connect the structured Square basis to a source-gated coefficient assembly
    and three-way status/audit runner.

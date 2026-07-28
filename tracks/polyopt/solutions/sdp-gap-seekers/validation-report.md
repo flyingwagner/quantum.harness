@@ -119,6 +119,9 @@ estimate.
 - Unit-improvement recession-feasibility job `22988185` reduced the ray scale
   to `1.23375e5` and fixed its objective to one, but the immutable-original
   equality residual was `9.991206e-11`; it remains rejected.
+- Row-equilibrated unit-improvement job `22988265` changed that residual only
+  to `9.133501e-11`; it too was rejected. The numerical conditioning cycle is
+  closed without a Kagome certificate.
 
 ## Remaining boundary
 

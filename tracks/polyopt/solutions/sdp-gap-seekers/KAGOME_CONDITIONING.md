@@ -200,3 +200,9 @@ The corresponding job `22988185` returned a finite unit-improvement point,
 but original-model equality residual `9.991205557433147e-11` still failed.
 See `KAGOME_RECESSION_RESULT.md`. Its scale is no longer pathological; the
 next isolated question is row equilibration of this finite feasibility model.
+
+Row-equilibrated job `22988265` returned residual
+`9.133500587283089e-11`, a small improvement but still a clear rejection.
+See `KAGOME_RECESSION_ROW_RESULT.md`. The conditioning cycle is closed:
+further scale-map variants are not justified without a new structural
+hypothesis.
