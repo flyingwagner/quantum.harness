@@ -64,6 +64,17 @@ old ray against the reduced model still rejects it with normalized equality
 residual `6.615275739340028e-11`. Deduplication is a solver-conditioning A/B
 treatment, not post-hoc acceptance of the old ray.
 
+For the xH5 A/B run, `solve_exported_mof.jl` copies either exported model into
+the same pinned MosekTools optimizer and writes raw statuses plus a canonical
+variable TSV. Its preflight parses and inventories a model without creating an
+optimizer or invoking optimization:
+
+```bash
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/solve_exported_mof.jl \
+  --preflight /path/to/audit.deduplicated.mof.json.gz
+```
+
 Uniform row normalization also cannot validate this ray: the largest
 row-scaled residual is `5.200797932297734e-11`. Per-block positive rescaling is
 mathematically equivalent under a corresponding inverse coefficient scaling,
