@@ -1,12 +1,16 @@
 # Kagome γ=1.272 diagonal-congruence result
 
+Later exact affine/PSD post-processing and a zero-mismatch source audit
+established `Δ_bulk ≤ 1.272` for the declared symmetry-restricted KMS class.
+This page evaluates only the rejected floating congruence result.
+
 ## Claim boundary
 
 Diagonal congruence balanced the large PSD blocks and reduced resource use,
 but its back-transformed ray was rejected at the unchanged normalized
 tolerance `1e-12`.
 
-Kagome γ=1.272 remains numerical instability. This result is neither an
+This floating result remains numerical instability. It is neither an
 infeasibility certificate nor a certified upper bound on the bulk gap.
 
 ## Reproducibility

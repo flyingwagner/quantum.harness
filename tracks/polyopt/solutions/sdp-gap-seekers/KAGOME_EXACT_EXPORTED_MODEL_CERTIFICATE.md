@@ -1,4 +1,4 @@
-# Kagome γ=1.272 exact exported-model certificate
+# Kagome γ=1.272 strict source-bound certificate
 
 ## Result
 
@@ -10,11 +10,11 @@ The ray has:
 - exact improving objective `119089//14841408527 > 0`;
 - rigorous positive-semidefinite proofs for all nine PSD blocks.
 
-This closes the certificate problem for the exported mathematical model. It
-does **not yet bind that model to the intended Kagome source assembly**.
-Until a source-assembly audit independently reproduces every row, block,
-objective coefficient, patch convention, and state restriction, this result
-must not be reported as a physical Kagome bulk-gap upper bound.
+The subsequent source audit independently reproduced every row, block,
+objective coefficient, patch convention, and state restriction with zero
+mismatches. The combined result establishes `Δ_bulk ≤ 1.272` for the
+declared sign- and cyclic-spin-symmetry-restricted infinite-volume KMS
+ground-state class. It is not an unrestricted-state claim.
 
 ## Immutable inputs and generated evidence
 
@@ -113,12 +113,12 @@ Acceptance requires:
   `exact_kernel_reduced_interval_ldlt_positive_semidefinite`;
 - `optimizer_invoked = false`.
 
-## Remaining source-binding boundary
+## Source binding
 
-The smallest next experiment is a solver-free source audit, analogous to the
-TFIM audit, that reconstructs the Kagome assembly independently of the MOF
-and compares canonical exact rows. It must cover the nine-block inventory,
-including the five strengthening blocks, and bind γ to `159/125`. A passing
-source audit would promote this exported-model certificate to a
-source-bound statement for the explicitly named symmetry-restricted state
-class; without it, the physical claim remains withheld.
+`KAGOME_SOURCE_AUDIT.md` records the completed solver-free source audit. It
+reproduces all 15,671 rows, the exact +λ objective, γ=`159/125`, the
+six-triangle/first-two-inner patch, all 54 Heisenberg coefficients, and all
+nine PSD blocks—including the five `posepsd9!` strengthening blocks. Its
+canonical source-row SHA-256 is
+`7de9f007983d79adcaa0997e7a8aea170b9f73bc050d32fa6731290f11176eb2`;
+the comparison reports zero mismatches and no optimizer invocation.

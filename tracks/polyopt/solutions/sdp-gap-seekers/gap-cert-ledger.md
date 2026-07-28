@@ -46,7 +46,7 @@ source-to-MOF coefficient audit.
 | model | config | numerical transition | independent evidence | conclusion |
 |---|---|---|---|---|
 | 1D TFIM | `N=9, g=0.5, d=2, lso=6`, sign- and reflection-symmetric | `(0.25075,0.25125]` | γ=0.25125 ray projected onto 2,705 exact rational equalities; four PSD blocks proved by 256-bit directed interval LDLᵀ; all 2,705 source rows/objective match exactly | `Δ_bulk ≤ 0.25125` for the declared symmetry-restricted KMS state class |
-| Kagome Heisenberg | `N=13, d=3, lso=5`, sign-symmetric | `(1.270,1.272]` | strict exact ray for intended-rational exported MOF: 15,671 exact rows, objective `119089//14841408527 > 0`, nine rigorous PSD blocks; source assembly not yet audited | exported-model certificate; physical `Δ_bulk ≤ 1.272` claim withheld pending source binding |
+| Kagome Heisenberg | `N=13, d=3, lso=5`, sign- and cyclic-spin-symmetric | `(1.270,1.272]` | strict exact ray: 15,671 exact rows, objective `119089//14841408527 > 0`, nine rigorous PSD blocks; independent source audit has zero row/objective/block mismatches | `Δ_bulk ≤ 1.272` for the declared symmetry-restricted KMS state class |
 
 ## Status (2026-07-28, certificate audit)
 
@@ -63,10 +63,11 @@ source-to-MOF coefficient audit.
   and regressed to `7.0496e-11`. Unit-improvement homogeneous feasibility
   removed arbitrary scale but failed at `9.9912e-11`; row equilibration changed
   it only to `9.1335e-11`. Exact post-processing subsequently produced a
-  strict intended-rational exported-MOF ray. Do not state the physical
-  `Δ_bulk ≤ 1.272` result until a source audit independently binds that MOF to
-  the Kagome Hamiltonian, geometry, nine PSD blocks, and sign-symmetric state
-  class.
+  strict intended-rational exported-MOF ray. The completed source audit then
+  independently reproduced the Kagome Hamiltonian, geometry, all 15,671
+  rows, nine PSD blocks, and exact +λ objective with zero mismatches. The
+  resulting `Δ_bulk ≤ 1.272` statement applies only to the declared sign- and
+  cyclic-spin-symmetry-restricted KMS state class.
 - **Square J1-J2:** the exact `L=1,d=2,g=1/2,γ=1/10` source assembly,
   structured-basis `M/G/K` core, conic render, and canonical status envelope
   pass the solver-free audit. The envelope deliberately says `unsolved` and
@@ -74,9 +75,6 @@ source-to-MOF coefficient audit.
 
 ## Open items
 
-1. Build the solver-free Kagome source audit. It must independently reproduce
-   all 15,671 affine rows, the objective, all nine PSD blocks, γ=`159/125`,
-   patch geometry, Hamiltonian convention, and sign-symmetric state class.
-2. Keep the Square status envelope distinct from a future immutable
+1. Keep the Square status envelope distinct from a future immutable
    solver-result envelope. A serious Square solve requires separately
    ratified physical setup and witness replay.

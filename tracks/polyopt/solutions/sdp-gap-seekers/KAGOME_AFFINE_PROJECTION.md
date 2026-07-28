@@ -110,7 +110,8 @@ has zero residual on all 15,671 rows, the positive exact objective
 `119089//14841408527`, and rigorous PSD proofs for all nine blocks.
 
 The construction, artifact hashes, and replay command are in
-`KAGOME_EXACT_EXPORTED_MODEL_CERTIFICATE.md`. This closes the exported-model
-projection/PSD problem. γ=1.272 remains withheld as a physical bound until a
-separate source-assembly audit reproduces the Kagome rows, objective, all nine
-blocks, geometry, Hamiltonian convention, and sign-symmetric state class.
+`KAGOME_EXACT_EXPORTED_MODEL_CERTIFICATE.md`. The subsequent audit in
+`KAGOME_SOURCE_AUDIT.md` reproduced the rows, objective, all nine blocks,
+geometry, Hamiltonian convention, and symmetry-restricted state class with
+zero mismatches. The combined result establishes `Δ_bulk ≤ 1.272` for that
+declared restricted KMS class.

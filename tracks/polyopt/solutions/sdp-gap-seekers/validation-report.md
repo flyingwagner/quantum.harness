@@ -13,11 +13,12 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `792/792` checks passed without optimization.
+Result on Julia 1.11.9: `803/803` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier  186
 TFIM source-audit row comparison               6
+Kagome source-audit Pauli strengthening       11
 square patch geometry                        24
 status runner static safety gates            29
 Square status envelope fail-closed contract  21
@@ -144,9 +145,13 @@ estimate.
   a strict ray for the intended rational reconstruction of the immutable
   Kagome MOF coefficients. All 15,671 rows vanish exactly, the objective is
   `119089//14841408527 > 0`, and all nine PSD blocks pass exact-zero,
-  exact-kernel, and 256-bit directed-interval LDLᵀ proofs. This is an
-  exported-model certificate, not yet a source-bound physical gap claim; the
-  Kagome source assembly has not yet been independently reproduced.
+  exact-kernel, and 256-bit directed-interval LDLᵀ proofs.
+- The independent Kagome source audit reproduces the six-triangle patch, all
+  54 Hamiltonian coefficients, γ=`159/125`, symmetry reductions, 20
+  stationarity variables, all 15,671 affine rows, all nine PSD blocks, and
+  the exact +λ objective with zero mismatches. Combined with the strict ray,
+  this proves `Δ_bulk ≤ 1.272` for the declared sign- and
+  cyclic-spin-symmetry-restricted KMS state class.
 
 ## Remaining boundary
 

@@ -1,5 +1,9 @@
 # Kagome γ=1.272 exact-deduplication A/B
 
+Later exact affine/PSD post-processing and a zero-mismatch source audit
+established `Δ_bulk ≤ 1.272` for the declared symmetry-restricted KMS class.
+This page remains the historical record of the rejected floating A/B rays.
+
 The xH5 A/B confirms solver instability and does not certify infeasibility.
 Both returned rays fail the unchanged independent normalized tolerance
 `1e-12` because of affine equality residuals.

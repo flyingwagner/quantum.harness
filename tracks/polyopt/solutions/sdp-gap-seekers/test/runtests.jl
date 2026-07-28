@@ -7,6 +7,8 @@ include(joinpath(@__DIR__, "..", "src", "GapRayPostprocess.jl"))
 using .GapRayPostprocess
 include(joinpath(@__DIR__, "..", "src", "TFIMSourceAudit.jl"))
 using .TFIMSourceAudit
+include(joinpath(@__DIR__, "..", "src", "KagomeSourceAudit.jl"))
+using .KagomeSourceAudit
 include(joinpath(@__DIR__, "gap_ray_verifier_tests.jl"))
 
 include(joinpath(@__DIR__, "..", "src", "SquareJ1J2Prototype.jl"))
@@ -45,6 +47,30 @@ using .SquareStatusEnvelope
         String,
     )
     @test occursin("source_assembly_equal\\ttrue", audit_text)
+    @test occursin("optimizer_invoked", audit_text)
+    @test !occursin("optimize!", audit_text)
+end
+
+@testset "Kagome source-audit exact Pauli strengthening" begin
+    @test pauli_real_action([0, 0], 0) == (0, 1)
+    @test pauli_real_action([1, 1], 0) == (3, 1)
+    @test pauli_real_action([2, 2], 0) == (3, -1)
+    @test pauli_real_action([2, 2], 3) == (0, -1)
+    @test pauli_real_action([3, 3], 1) == (1, -1)
+    @test_throws ErrorException pauli_real_action([2, 0], 0)
+    @test_throws ErrorException pauli_real_action([4, 0], 0)
+
+    audit_text = read(
+        joinpath(
+            @__DIR__,
+            "..",
+            "scripts",
+            "audit_kagome_source_assembly.jl",
+        ),
+        String,
+    )
+    @test occursin("source_assembly_equal\\ttrue", audit_text)
+    @test occursin("strengthening_dimensions", audit_text)
     @test occursin("optimizer_invoked", audit_text)
     @test !occursin("optimize!", audit_text)
 end

@@ -1,5 +1,9 @@
 # Kagome γ=1.272 conditioning audit
 
+Later exact affine/PSD post-processing and a zero-mismatch source audit
+established `Δ_bulk ≤ 1.272` for the declared symmetry-restricted KMS class.
+This page remains the diagnosis of the originally rejected floating ray.
+
 The supplied `N=13, d=3, lso=5`, sign-symmetric Kagome ray remains rejected.
 Nothing in this audit changes the `1e-12` independent replay tolerance or
 supports calling γ=1.272 infeasible.

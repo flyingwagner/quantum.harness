@@ -1,12 +1,16 @@
 # Kagome γ=1.272 normalized-recession result
 
+Later exact affine/PSD post-processing and a zero-mismatch source audit
+established `Δ_bulk ≤ 1.272` for the declared symmetry-restricted KMS class.
+This page evaluates only the rejected floating recession result.
+
 ## Claim boundary
 
 Unit-improvement homogeneous feasibility removed the unbounded ray scale but
 did not meet the independent equality tolerance. The returned point was
 rejected at normalized tolerance `1e-12`.
 
-Kagome γ=1.272 remains numerical instability. Mosek's `FEASIBLE_POINT`
+This floating result remains numerical instability. Mosek's `FEASIBLE_POINT`
 solution status is not an independently accepted ray, an infeasibility
 certificate, or a certified bulk-gap bound.
 

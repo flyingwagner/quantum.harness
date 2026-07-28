@@ -1,13 +1,17 @@
 # Kagome γ=1.272 row-equilibrated recession result
 
+Later exact affine/PSD post-processing and a zero-mismatch source audit
+established `Δ_bulk ≤ 1.272` for the declared symmetry-restricted KMS class.
+This page evaluates only the rejected floating row-equilibrated result.
+
 ## Claim boundary
 
 Positive row equilibration slightly improved the finite unit-ray equality
 residual, but the returned point still failed the unchanged `1e-12`
 independent replay.
 
-Kagome γ=1.272 remains numerical instability. No tested formulation supports
-infeasibility or a certified bulk-gap upper bound.
+This floating result remains numerical instability and does not itself
+support infeasibility or a certified bulk-gap upper bound.
 
 ## Reproducibility
 
