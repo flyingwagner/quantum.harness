@@ -69,11 +69,12 @@ ray scale. Its largest residual rows remain cancellation-dominated by the
 271×271 and 17×17 PSD blocks. Loosening the verifier tolerance is not a valid
 response.
 
-## Next experiment
+## Subsequent experiment
 
-The smallest distinct experiment is diagonal congruence scaling inside each
+The next distinct experiment used diagonal congruence scaling inside each
 direct PSD block, `X=DZD`, followed by the same row/objective normalization.
 It is exactly reversible, preserves PSD membership in both directions, and
-can balance the 104×104 block's roughly 20-order diagonal range. Acceptance
-remains a back-transformed replay against the immutable original MOF at
-`1e-12`.
+balances the 104×104 block's roughly 20-order diagonal range. Job `22988126`
+also stalled and its back-transformed equality residual was
+`7.049624122338534e-11`, so it was rejected. See
+`KAGOME_CONGRUENCE_RESULT.md`.

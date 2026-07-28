@@ -178,3 +178,15 @@ approximately `1.1e-3` to `4.0e16`. The generated map:
 The mapped old ray still rejects, as expected for an inexact old candidate.
 A fresh solve is decision-relevant because this map equilibrates within the
 large PSD blocks, which the completed uniform-block experiment could not do.
+
+The fresh diagonal-congruence job `22988126` nevertheless stalled and its
+back-transformed original-model equality residual was
+`7.049624122338534e-11`. PSD and objective checks passed, but the unchanged
+`1e-12` verifier rejected it. Full details are in
+`KAGOME_CONGRUENCE_RESULT.md`.
+
+Both reference-ray-derived maps have now been tested. The next route is not
+another coordinate heuristic: explicitly construct the homogeneous recession
+system and normalize its improving objective to one. That turns existence of
+an improving ray into finite conic feasibility while preserving the exact
+mathematical certificate condition.

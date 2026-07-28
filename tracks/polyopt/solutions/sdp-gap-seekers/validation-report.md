@@ -110,6 +110,9 @@ estimate.
   original-model equality residual to `9.914902e-12`, but still failed the
   unchanged `1e-12` replay. This is numerical conditioning evidence, not an
   infeasibility result.
+- Diagonal-congruence job `22988126` preserved PSD equivalence and reduced
+  solve time/memory, but its back-transformed equality residual
+  `7.049624e-11` was worse. It too remains rejected numerical evidence.
 
 ## Remaining boundary
 
