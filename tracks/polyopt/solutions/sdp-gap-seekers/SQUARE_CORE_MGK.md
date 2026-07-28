@@ -72,20 +72,20 @@ The independent hand fixture `H=Z`, basis `[X,Y]`, fixes the complex signs:
 The reviewed typed byte grammar, Pauli/basis/row content IDs, normalization,
 stationarity, right-hand sides, feasibility objective, exact scalar-row
 mapping, and complex-to-real PSD rendering are now implemented and tested.
-The remaining boundary is:
+The complete native canonical inventory and envelope now serialize all 247,540
+component records and independently validate full coverage. The remaining
+boundary is:
 
-1. Extend `SharedCoreWire.jl` with block, coefficient, wiring, coverage, and
-   source-evidence records, then add `emit_square_core_inventory.jl`. It must
-   serialize all 247,540 component records, recompute pair/component coverage,
-   and produce a gamma-independent canonical math hash plus envelope.
-2. Add a conic-render envelope binding the core math hash, exact gamma,
+1. Add a conic-render envelope binding the core math hash, exact gamma,
    normalization/stationarity row IDs, real cone coordinates, MOF SHA, source
    commit, and environment.
-3. Extend `gap_status_runner_lib.jl` with a Square point. The source
+2. Extend `gap_status_runner_lib.jl` with a Square point. The source
    gate must bind the Hamiltonian, `L`, `d`, basis manifests, core math hash,
    conic-render hash, state class, exact γ, environment, and output MOF. Raw
    solver status remains `unknown` unless an independently replayed witness or
    ray passes.
+3. For a gating diff against legacy SpectralGap rather than another native
+   emitter, freeze the explicit source mapping and complete source-event trace.
 
 Acceptance for the eventual Square runner is: solver-free dry run reconstructs
 every source hash; the emitted MOF independently reproduces its coefficient

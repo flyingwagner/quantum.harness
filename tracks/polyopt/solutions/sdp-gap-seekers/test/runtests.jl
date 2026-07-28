@@ -624,6 +624,12 @@ using .SharedCoreWire
           "b75e0d4cab1d35247d2f654bd9c65566cac050be7202baadbf82c42120958975"
     grammar_value = decode_math_bytes(grammar_bytes)
     @test canonical_math_bytes(grammar_value) == grammar_bytes
+    envelope_bytes = canonical_framed_bytes("AICOREENV1", grammar_value)
+    @test canonical_framed_bytes(
+        "AICOREENV1",
+        decode_framed_bytes(envelope_bytes, "AICOREENV1"),
+    ) == envelope_bytes
+    @test_throws ArgumentError canonical_framed_bytes("not-a-frame", grammar_value)
 
     hz_hex =
         "4149434f5245310a4f383a5331323a675f70726f647563745f7879432d31" *
@@ -662,6 +668,8 @@ end
 
 include(joinpath(@__DIR__, "..", "src", "SquareGapConic.jl"))
 using .SquareGapConic
+include(joinpath(@__DIR__, "..", "src", "SquareCoreInventory.jl"))
+using .SquareCoreInventory
 import JuMP
 
 @testset "complex Hermitian to real PSD rendering" begin
@@ -702,6 +710,46 @@ import JuMP
         1,
         2,
     )
+end
+
+@testset "Square shared-core inventory declarations" begin
+    problem = GapProblem(
+        square_patch_geometry(1),
+        square_j1j2_model(1 // 2),
+        1 // 10,
+        2;
+        basis_mode=:structured,
+        basis_spec=StructuredBasisSpec(:one_symbol_lift, 1),
+    )
+    source = core_mgk_plan(problem)
+    positive_selector =
+        SquareCoreInventory.selector_spec(source.positive_basis)
+    gap_selector = SquareCoreInventory.selector_spec(source.gap_basis)
+    @test SquareCoreInventory.field(
+        positive_selector,
+        "basis_selector_sha256",
+    ) != SquareCoreInventory.field(gap_selector, "basis_selector_sha256")
+    @test SquareCoreInventory.field(
+        positive_selector,
+        "basis_selector_id",
+    ) == "structured-one-symbol-lift"
+    action, reference = SquareCoreInventory.unrestricted_action(
+        [source.positive_basis, source.gap_basis],
+    )
+    @test SquareCoreInventory.field(action, "mode") == "unrestricted"
+    @test SquareCoreInventory.field(reference, "action_sha256") ==
+          SquareCoreInventory.field(action, "action_sha256")
+    config = SquareCoreInventory.exact_model_config(problem)
+    parameters = SquareCoreInventory.field(config, "parameters")
+    @test SquareCoreInventory.field(parameters, "j1") == 1 // 1
+    @test SquareCoreInventory.field(parameters, "j2_over_j1") == 1 // 2
+    @test SquareCoreInventory.field(parameters, "spin_operator_scale") == 1 // 2
+    inventory_source = read(
+        joinpath(@__DIR__, "..", "src", "SquareCoreInventory.jl"),
+        String,
+    )
+    @test !occursin("optimize!", inventory_source)
+    @test !occursin("Mosek", inventory_source)
 end
 
 @testset "solver-free Square conic render" begin

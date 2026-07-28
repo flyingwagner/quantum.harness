@@ -13,7 +13,7 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `624/624` checks passed without optimization.
+Result on Julia 1.11.9: `635/635` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier   59
@@ -27,8 +27,9 @@ storage estimates                             2
 exact local spin identities                  22
 generic solver-free problem adapter          43
 structured basis manifests                  100
-shared core canonical wire grammar           15
+shared core canonical wire grammar           17
 complex Hermitian to real PSD rendering        5
+Square shared-core inventory declarations      9
 solver-free Square conic render               15
 exact core M/G/K pair algebra                23
 Square J1-J2 core M/G/K source gate         125
@@ -63,6 +64,17 @@ equalities, complex PSD blocks 703 and 7 rendered as real PSD blocks 1406 and
 variables, four equalities, and the two expected PSD dimensions.
 Both emitter and reader report that optimization was not invoked.
 
+## Canonical Square core inventory
+
+The complete native `core_mgk` artifact contains 161,886,794 canonical bytes,
+247,484 pair records, all 247,540 required component records, 247,824 nonzero
+coefficients, and 74,602 referenced scalar rows. Its SHA-256 is
+`1d466cea7256a71d03d50f84d58f2d088d69360bfeb5b18161108d10c16e8549`.
+An independent two-minute validation passed byte-identical decode/re-encode,
+the envelope and eight section hashes, all derived IDs and references,
+Hermitian diagonal reality, exact nonzero/zero record rules, and complete
+pair/component coverage. No optimizer was invoked.
+
 ## Small ED oracle
 
 For the finite 3×3 internal-bond Hamiltonian at `g=1/2`, two independent matrix
@@ -87,9 +99,9 @@ estimate.
 
 ## Remaining boundary
 
-- canonical shared-core block/wiring/coverage records, envelope, and full tensor
-  artifact (the scalar grammar and term/basis/row IDs are complete);
 - a conic-render envelope binding the exact source to the emitted MOF;
+- a frozen legacy source mapping/event trace if Gate C compatibility with
+  SpectralGap is required rather than a native-to-native tensor diff;
 - a source-gated Square MOF/status runner and independent conic replay;
 - any strictly audited Square infeasibility ray and resulting bulk-gap bound.
 

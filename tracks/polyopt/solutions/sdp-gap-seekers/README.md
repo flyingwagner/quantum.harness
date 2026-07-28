@@ -69,6 +69,9 @@ implementation branch.
 - [`SQUARE_CONIC_RENDER.md`](SQUARE_CONIC_RENDER.md): exact normalization,
   stationarity, real PSD embedding, solver-free MOF command, and measured
   `L=1,d=2` inventory.
+- [`SQUARE_CORE_INVENTORY.md`](SQUARE_CORE_INVENTORY.md): complete
+  gamma-independent native `core_mgk` bytes, hash envelope, full
+  pair/component coverage, and independent artifact validator.
 
 The geometry/model layer uses exact arithmetic. The Square source gate can now
 assemble and serialize a conic feasibility model through the declared JuMP/MOI

@@ -8,11 +8,14 @@ using ..CoreMGK: ScalarMoment
 
 export CanonicalObject,
     canonical_math_bytes,
+    canonical_framed_bytes,
     canonical_sha256,
     canonical_state_monomial,
     canonical_scalar_row,
     canonical_support_word,
+    decode_framed_bytes,
     decode_math_bytes,
+    domain_sha256,
     encode_value,
     entry_id,
     row_id,
@@ -161,13 +164,18 @@ function encode_value(value)
     return take!(io)
 end
 
-function canonical_math_bytes(value)
+function canonical_framed_bytes(header::AbstractString, value)
+    header_text = valid_string(header)
+    occursin(r"^[A-Z][A-Z0-9]*$", header_text) ||
+        throw(ArgumentError("canonical frame header is not an uppercase identifier"))
     io = IOBuffer()
-    write(io, "AICORE1\n")
+    write(io, header_text, "\n")
     write_value(io, value)
     write(io, "\n")
     return take!(io)
 end
+
+canonical_math_bytes(value) = canonical_framed_bytes("AICORE1", value)
 
 canonical_sha256(bytes::AbstractVector{UInt8}) = bytes2hex(sha256(bytes))
 canonical_sha256(value) = canonical_sha256(canonical_math_bytes(value))
@@ -293,9 +301,12 @@ function parse_value!(parser::Parser)
     error("unknown canonical type tag $(Char(tag))")
 end
 
-function decode_math_bytes(input::AbstractVector{UInt8})
+function decode_framed_bytes(
+    input::AbstractVector{UInt8},
+    header_text::AbstractString,
+)
     bytes = Vector{UInt8}(input)
-    header = Vector{UInt8}(codeunits("AICORE1\n"))
+    header = Vector{UInt8}(codeunits(valid_string(header_text) * "\n"))
     length(bytes) >= length(header) + 1 || error("truncated canonical math file")
     bytes[1:length(header)] == header || error("canonical math header mismatch")
     last(bytes) == UInt8('\n') || error("canonical math file lacks final newline")
@@ -303,10 +314,13 @@ function decode_math_bytes(input::AbstractVector{UInt8})
     value = parse_value!(parser)
     parser.index == length(bytes) ||
         error("canonical math file has trailing or missing bytes")
-    canonical_math_bytes(value) == bytes ||
+    canonical_framed_bytes(header_text, value) == bytes ||
         error("decoded canonical value does not re-encode byte-identically")
     return value
 end
+
+decode_math_bytes(input::AbstractVector{UInt8}) =
+    decode_framed_bytes(input, "AICORE1")
 
 function preimage_sha256(prefix::AbstractString, value)
     io = IOBuffer()
@@ -315,6 +329,9 @@ function preimage_sha256(prefix::AbstractString, value)
     write(io, "\n")
     return bytes2hex(sha256(take!(io)))
 end
+
+domain_sha256(prefix::AbstractString, value) =
+    preimage_sha256(prefix, value)
 
 function canonical_support_word(
     word::PauliWord;
