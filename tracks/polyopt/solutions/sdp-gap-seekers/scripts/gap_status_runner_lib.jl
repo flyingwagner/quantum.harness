@@ -779,9 +779,14 @@ end
 
 function actual_certifier(point::RunPoint)
     supports, coefficients = build_hamiltonian_data(point)
-    H = SpectralGap.ncpoly(supports, Float64.(coefficients))
+    H = Base.invokelatest(
+        SpectralGap.ncpoly,
+        supports,
+        Float64.(coefficients),
+    )
     if point.model == :tfim
-        return SpectralGap.certify_Ising_gap(
+        return Base.invokelatest(
+            SpectralGap.certify_Ising_gap,
             point.N,
             H,
             Float64(point.gamma),
@@ -792,7 +797,8 @@ function actual_certifier(point::RunPoint)
     end
     triples = [collect(triple) for triple in KAGOME_TRIPLES]
     inner_triples = [collect(triple) for triple in KAGOME_INNER_TRIPLES]
-    return SpectralGap.certify_Heisenberg_kagome_gap(
+    return Base.invokelatest(
+        SpectralGap.certify_Heisenberg_kagome_gap,
         point.N,
         H,
         triples,
