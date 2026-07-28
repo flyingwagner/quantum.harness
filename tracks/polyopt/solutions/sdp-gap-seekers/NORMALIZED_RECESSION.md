@@ -60,3 +60,7 @@ Any returned point must still be replayed against the immutable original MOF.
 The original verifier checks homogeneous equalities, PSD membership, and
 objective direction without trusting the normalization model or solver
 status. A floating replay is still not a strict certificate.
+
+Job `22988185` tested this formulation. It produced a finite unit-improvement
+point but the immutable-original replay rejected normalized equality residual
+`9.991205557433147e-11`. See `KAGOME_RECESSION_RESULT.md`.

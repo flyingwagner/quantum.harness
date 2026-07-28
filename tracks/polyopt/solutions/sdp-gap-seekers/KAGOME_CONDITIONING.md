@@ -195,3 +195,8 @@ That route is implemented by `normalize_mof_recession.jl` and documented in
 `NORMALIZED_RECESSION.md`. The solver-free Kagome prototype has 15,672
 equalities (the 15,671 homogeneous source rows plus one objective
 normalization), retains all nine PSD blocks, and invokes no optimizer.
+
+The corresponding job `22988185` returned a finite unit-improvement point,
+but original-model equality residual `9.991205557433147e-11` still failed.
+See `KAGOME_RECESSION_RESULT.md`. Its scale is no longer pathological; the
+next isolated question is row equilibration of this finite feasibility model.

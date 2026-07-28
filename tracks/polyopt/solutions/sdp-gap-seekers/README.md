@@ -64,6 +64,8 @@ implementation branch.
   PSD-preserving diagonal-congruence xH5 result and rejection.
 - [`NORMALIZED_RECESSION.md`](NORMALIZED_RECESSION.md): convert an unbounded
   ray search into equivalent finite homogeneous conic feasibility.
+- [`KAGOME_RECESSION_RESULT.md`](KAGOME_RECESSION_RESULT.md): xH5 result for
+  the finite unit-improvement formulation and independent rejection.
 - [`KAGOME_AB_RESULT.md`](KAGOME_AB_RESULT.md): completed xH5
   original-versus-deduplicated solve and unchanged-tolerance replay.
 - [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,

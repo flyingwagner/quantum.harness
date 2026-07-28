@@ -116,6 +116,9 @@ estimate.
 - Diagonal-congruence job `22988126` preserved PSD equivalence and reduced
   solve time/memory, but its back-transformed equality residual
   `7.049624e-11` was worse. It too remains rejected numerical evidence.
+- Unit-improvement recession-feasibility job `22988185` reduced the ray scale
+  to `1.23375e5` and fixed its objective to one, but the immutable-original
+  equality residual was `9.991206e-11`; it remains rejected.
 
 ## Remaining boundary
 
