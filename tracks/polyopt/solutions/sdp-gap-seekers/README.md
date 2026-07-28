@@ -58,6 +58,8 @@ implementation branch.
   source-to-MOF binding for the restricted TFIM relaxation.
 - [`KAGOME_CONDITIONING.md`](KAGOME_CONDITIONING.md): solver-free γ=1.272
   conditioning diagnosis and exact equality-deduplication experiment.
+- [`KAGOME_EQUILIBRATION_RESULT.md`](KAGOME_EQUILIBRATION_RESULT.md):
+  source-gated xH5 uniform-block/row conditioning result and rejection.
 - [`KAGOME_AB_RESULT.md`](KAGOME_AB_RESULT.md): completed xH5
   original-versus-deduplicated solve and unchanged-tolerance replay.
 - [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,

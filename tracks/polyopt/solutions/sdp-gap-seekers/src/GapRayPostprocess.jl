@@ -27,6 +27,7 @@ export BigRational,
     private_pivot_rows,
     psd_block_scales,
     ray_equilibration,
+    ray_congruence_equilibration,
     read_ray_values,
     read_scale_map,
     transform_ray,
@@ -361,6 +362,126 @@ function ray_equilibration(model, values::AbstractVector{<:Real})
     )
 end
 
+function congruence_coordinate_scales(
+    group::AbstractVector{MOI.VariableIndex},
+    magnitudes::Dict{MOI.VariableIndex,Float64},
+)
+    dimension = MOIU.side_dimension_for_vectorized_dimension(length(group))
+    div(dimension * (dimension + 1), 2) == length(group) ||
+        error("invalid triangular PSD block dimension")
+    diagonal_exponents = Int[]
+    for index in 1:dimension
+        variable = group[MOIU.trimap(index, index)]
+        magnitude = magnitudes[variable]
+        # x_ii = d_i^2 z_ii. Rounding half the binary exponent keeps each
+        # nonzero reference diagonal within a factor two of one in z.
+        exponent = iszero(magnitude) ? 0 :
+                   round(Int, log2(magnitude) / 2)
+        push!(diagonal_exponents, exponent)
+    end
+    exponents = Int[]
+    scales = Float64[]
+    for coordinate in eachindex(group)
+        row, column = MOIU.inverse_trimap(coordinate)
+        exponent = diagonal_exponents[row] + diagonal_exponents[column]
+        scale = ldexp(1.0, exponent)
+        isfinite(scale) && scale > 0 ||
+            error("PSD congruence scale is not finite and positive")
+        push!(exponents, exponent)
+        push!(scales, scale)
+    end
+    return exponents, scales
+end
+
+"""
+Choose an invertible diagonal-congruence substitution for each direct PSD
+matrix from a reference ray:
+
+    X = D * Z * D
+
+Every diagonal entry of `D` is a positive (possibly square-root)
+power-of-two, so each stored triangular coordinate still has a positive
+power-of-two scale. Variables outside direct PSD blocks retain independent
+reference-ray scaling. Unlike arbitrary coordinate scaling, diagonal
+congruence preserves positive semidefiniteness in both directions.
+"""
+function ray_congruence_equilibration(
+    model,
+    values::AbstractVector{<:Real},
+)
+    variables = sort(
+        MOI.get(model, MOI.ListOfVariableIndices());
+        by=variable -> variable.value,
+    )
+    length(values) == length(variables) ||
+        throw(ArgumentError("reference ray length differs from model"))
+    all(isfinite, values) || error("reference ray contains non-finite values")
+    magnitudes_vector = Float64.(abs.(values))
+    magnitudes = Dict(
+        variable => magnitudes_vector[index]
+        for (index, variable) in enumerate(variables)
+    )
+    exponents = [
+        iszero(magnitude) ? 0 : floor(Int, log2(magnitude))
+        for magnitude in magnitudes_vector
+    ]
+    scales = [
+        ldexp(1.0, exponent)
+        for exponent in exponents
+    ]
+    all(scale -> isfinite(scale) && scale > 0, scales) ||
+        error("reference-ray scale is not finite and positive")
+    groups = direct_psd_groups(model)
+    positions = Dict(
+        variable => position for (position, variable) in enumerate(variables)
+    )
+    for group in groups
+        group_exponents, group_scales =
+            congruence_coordinate_scales(group, magnitudes)
+        for (coordinate, variable) in enumerate(group)
+            position = positions[variable]
+            exponents[position] = group_exponents[coordinate]
+            scales[position] = group_scales[coordinate]
+        end
+    end
+    return (
+        variables=variables,
+        maxima=magnitudes_vector,
+        exponents=exponents,
+        scales=scales,
+        direct_psd_groups=groups,
+    )
+end
+
+function power_of_two_exponent(value::Float64)
+    isfinite(value) && value > 0 ||
+        error("variable scale is not finite and positive")
+    significand(value) == 1.0 ||
+        error("direct PSD coordinate scale is not a power of two")
+    return exponent(value)
+end
+
+function validate_congruence_scales(block_scales::AbstractVector{Float64})
+    dimension =
+        MOIU.side_dimension_for_vectorized_dimension(length(block_scales))
+    div(dimension * (dimension + 1), 2) == length(block_scales) ||
+        error("invalid triangular PSD block dimension")
+    exponents = power_of_two_exponent.(block_scales)
+    diagonal_exponents = [
+        exponents[MOIU.trimap(index, index)]
+        for index in 1:dimension
+    ]
+    for coordinate in eachindex(exponents)
+        row, column = MOIU.inverse_trimap(coordinate)
+        2 * exponents[coordinate] ==
+            diagonal_exponents[row] + diagonal_exponents[column] ||
+            error(
+                "direct PSD coordinate scales are not one diagonal congruence",
+            )
+    end
+    return nothing
+end
+
 function scaled_function(
     function_value::MOI.ScalarAffineFunction{Float64},
     scales::Dict{MOI.VariableIndex,Float64},
@@ -432,11 +553,11 @@ function apply_variable_scaling!(model, equilibration=column_equilibration(model
                     scale_by_variable[variable]
                     for variable in function_value.variables
                 ]
-                all(==(first(block_scales)), block_scales) ||
-                    error("direct PSD block does not have one uniform scale")
-                # x = s*z with s>0 gives x PSD iff z PSD. The common factor is
-                # therefore omitted from this cone constraint while it remains
-                # present in every affine occurrence of the variables.
+                validate_congruence_scales(block_scales)
+                # X = D*Z*D with invertible positive diagonal D gives X PSD
+                # iff Z PSD. The congruence factors are therefore omitted from
+                # this cone constraint while they remain in every affine
+                # occurrence of the variables.
                 continue
             end
             function_value isa Union{

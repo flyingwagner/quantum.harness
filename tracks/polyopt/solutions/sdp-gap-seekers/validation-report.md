@@ -13,10 +13,10 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `665/665` checks passed without optimization.
+Result on Julia 1.11.9: `671/671` checks passed without optimization.
 
 ```text
-solver-free homogeneous conic-ray verifier   84
+solver-free homogeneous conic-ray verifier   90
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
@@ -39,7 +39,8 @@ solver-free status runner contract           58
 
 The homogeneous-ray fixtures distinguish accepted improving rays from equality,
 PSD, and objective-sign failures. They also cover affine recession directions,
-scale invariance, and the Kagome-size cancellation pathology.
+scale invariance, the Kagome-size cancellation pathology, and fail-closed
+validation of PSD-preserving diagonal-congruence variable maps.
 
 ## Square exact-core gate
 
@@ -104,6 +105,11 @@ estimate.
   at `1e-12`, with normalized equality residuals `3.245719e-11` and
   `3.079840e-10`. Deduplication reduced time, memory, and scale but did not
   produce a certificate.
+- The follow-up uniform-PSD-block/row equilibration job `22988046` also
+  returned `SLOW_PROGRESS` / unknown. Its back-transformed ray improved the
+  original-model equality residual to `9.914902e-12`, but still failed the
+  unchanged `1e-12` replay. This is numerical conditioning evidence, not an
+  infeasibility result.
 
 ## Remaining boundary
 

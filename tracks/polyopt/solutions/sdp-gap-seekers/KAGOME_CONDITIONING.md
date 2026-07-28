@@ -99,7 +99,10 @@ completed original A/B ray:
 5. the objective receives one positive factor, preserving improvement
    direction.
 
-Coordinate-wise scaling inside a direct PSD matrix is explicitly rejected.
+Arbitrary coordinate-wise scaling inside a direct PSD matrix is explicitly
+rejected. A structured coordinate map is allowed only when its triangular
+scales factor as `sᵢⱼ=dᵢdⱼ`, because then it is the invertible diagonal
+congruence `X=DZD` and preserves PSD membership in both directions.
 The first block-only prototype was mathematically equivalent but produced
 coefficients as large as `1.24e35`; it was not submitted and is preserved as a
 failed conditioning attempt. Composing row/objective normalization reduces the
@@ -133,3 +136,45 @@ instead of being hidden by the global `4.3e17` scale. This is precisely why a
 fresh solve can be informative. Any returned scaled ray must be inverse-mapped
 and replayed against the immutable original MOF at `1e-12`; the transformed
 model's own residual is not acceptance evidence.
+
+## Completed uniform-block xH5 result
+
+Job `22988046`, source `57befde`, ran the declared uniform-block/row map with
+36 CPU and 128 GiB on `xhacnormalb`. It completed in 4m53s with batch MaxRSS
+15,957,768 KiB; Mosek spent 66.56s and again returned `SLOW_PROGRESS`,
+primal/dual `UNKNOWN_RESULT_STATUS`.
+
+The back-transformed ray passes PSD and improving-objective checks but fails
+the original-model equality check:
+
+- normalized equality residual: `9.914901660490167e-12`;
+- normalized PSD violation: between `1.27e-17` and `1.65e-17` across the xH5
+  and local LAPACK replays, both safely below tolerance;
+- normalized improving objective: `6.452369852106409e-8`;
+- original-coordinate scale: `5.808433831135018e34`.
+
+The equality residual is about 3.3 times better than the original A/B ray but
+still about 9.9 times the accepted tolerance. The complete result and
+independent local replay are documented in
+`KAGOME_EQUILIBRATION_RESULT.md`. No infeasibility or gap bound follows.
+
+## Next isolated map: diagonal congruence
+
+`ray_congruence_equilibration` uses the diagonal of the supplied ray to choose
+one positive power-of-two row/column factor per PSD matrix index. Stored
+triangle coordinates receive `sᵢⱼ=dᵢdⱼ`; the code verifies that factorization
+before omitting the factors from the direct PSD constraint.
+
+This matters most for the 104×104 block, whose reference diagonal spans
+approximately `1.1e-3` to `4.0e16`. The generated map:
+
+- preserves all 54,944 variables, 15,671 equalities, and nine PSD dimensions;
+- uses coordinate exponents `[-12,58]`, equality-row exponents `[-58,10]`,
+  and objective exponent `-41`;
+- maps reference-ray scale `4.319157242331815e17 → 1.9645621823673163`;
+- limits the maximum transformed column coefficient to `1.272`;
+- round-trips the reference ray byte-for-byte.
+
+The mapped old ray still rejects, as expected for an inexact old candidate.
+A fresh solve is decision-relevant because this map equilibrates within the
+large PSD blocks, which the completed uniform-block experiment could not do.

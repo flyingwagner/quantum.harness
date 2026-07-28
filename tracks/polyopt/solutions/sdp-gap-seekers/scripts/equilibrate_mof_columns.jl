@@ -7,9 +7,13 @@ import JuMP
 const MOI = JuMP.MOI
 
 function main(args=ARGS)
-    length(args) in (3, 4) || error(
-        "usage: equilibrate_mof_columns.jl INPUT.mof.json[.gz] OUTPUT.mof.json[.gz] SCALE.tsv [REFERENCE_RAY.tsv]",
+    length(args) in (3, 4, 5) || error(
+        "usage: equilibrate_mof_columns.jl INPUT.mof.json[.gz] OUTPUT.mof.json[.gz] SCALE.tsv [REFERENCE_RAY.tsv [--congruence]]",
     )
+    length(args) == 5 && args[5] != "--congruence" &&
+        error("the only fifth argument supported is --congruence")
+    length(args) == 5 || "--congruence" ∉ args ||
+        error("--congruence requires a reference ray")
     input_path, output_path, scale_path = args
     abspath(input_path) == abspath(output_path) &&
         error("input and output paths must differ")
@@ -21,12 +25,18 @@ function main(args=ARGS)
         MOI.get(model, MOI.ListOfVariableIndices());
         by=variable -> variable.value,
     )
-    if length(args) == 4
+    if length(args) >= 4
         ray_indices, ray_values = read_ray_values(args[4])
         ray_indices == [variable.value for variable in variables_before] ||
             error("reference-ray MOI indices differ from the model")
-        equilibration = ray_equilibration(model, ray_values)
-        mode = "reference-ray-power-of-two"
+        if length(args) == 5
+            equilibration =
+                ray_congruence_equilibration(model, ray_values)
+            mode = "reference-ray-diagonal-congruence-power-of-two"
+        else
+            equilibration = ray_equilibration(model, ray_values)
+            mode = "reference-ray-uniform-psd-block-power-of-two"
+        end
     else
         equilibration = column_equilibration(model)
         mode = "column-power-of-two"

@@ -339,6 +339,96 @@ end
             RayMOI.ConstraintFunction(),
             direct_psd_constraint,
         ) == RayMOI.VectorOfVariables(direct_psd_variables)
+
+        congruence_model = RayMOI.Utilities.Model{Float64}()
+        congruence_variables = RayMOI.add_variables(congruence_model, 3)
+        congruence_constraint = RayMOI.add_constraint(
+            congruence_model,
+            RayMOI.VectorOfVariables(congruence_variables),
+            RayMOI.PositiveSemidefiniteConeTriangle(2),
+        )
+        congruence_equality = RayMOI.add_constraint(
+            congruence_model,
+            RayMOI.ScalarAffineFunction(
+                [
+                    RayMOI.ScalarAffineTerm(1.0, congruence_variables[1]),
+                    RayMOI.ScalarAffineTerm(1.0, congruence_variables[2]),
+                    RayMOI.ScalarAffineTerm(1.0, congruence_variables[3]),
+                ],
+                0.0,
+            ),
+            RayMOI.EqualTo(0.0),
+        )
+        congruence_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(1.0, congruence_variables[1])],
+            0.0,
+        )
+        RayMOI.set(
+            congruence_model,
+            RayMOI.ObjectiveSense(),
+            RayMOI.MAX_SENSE,
+        )
+        RayMOI.set(
+            congruence_model,
+            RayMOI.ObjectiveFunction{typeof(congruence_objective)}(),
+            congruence_objective,
+        )
+        congruence_map = ray_congruence_equilibration(
+            congruence_model,
+            [16.0, 32.0, 64.0],
+        )
+        @test congruence_map.exponents == [4, 5, 6]
+        @test congruence_map.scales == [16.0, 32.0, 64.0]
+        apply_variable_scaling!(congruence_model, congruence_map)
+        @test RayMOI.get(
+            congruence_model,
+            RayMOI.ConstraintFunction(),
+            congruence_constraint,
+        ) == RayMOI.VectorOfVariables(congruence_variables)
+        transformed_congruence_equality = RayMOI.get(
+            congruence_model,
+            RayMOI.ConstraintFunction(),
+            congruence_equality,
+        )
+        @test [
+            term.coefficient
+            for term in transformed_congruence_equality.terms
+        ] == [16.0, 32.0, 64.0]
+        @test backtransform_ray(
+            [1.0, 1.0, 1.0],
+            congruence_map.scales,
+        ) == [16.0, 32.0, 64.0]
+
+        invalid_congruence_model = RayMOI.Utilities.Model{Float64}()
+        invalid_variables =
+            RayMOI.add_variables(invalid_congruence_model, 3)
+        RayMOI.add_constraint(
+            invalid_congruence_model,
+            RayMOI.VectorOfVariables(invalid_variables),
+            RayMOI.PositiveSemidefiniteConeTriangle(2),
+        )
+        invalid_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(1.0, invalid_variables[1])],
+            0.0,
+        )
+        RayMOI.set(
+            invalid_congruence_model,
+            RayMOI.ObjectiveSense(),
+            RayMOI.MAX_SENSE,
+        )
+        RayMOI.set(
+            invalid_congruence_model,
+            RayMOI.ObjectiveFunction{typeof(invalid_objective)}(),
+            invalid_objective,
+        )
+        invalid_map = (
+            variables=invalid_variables,
+            scales=[4.0, 8.0, 8.0],
+        )
+        @test_throws ErrorException apply_variable_scaling!(
+            invalid_congruence_model,
+            invalid_map,
+        )
         @test backtransform_ray([1.0, 0.0, 0.25], ray_map.scales) ==
               [4.0, 0.0, 1.0]
         row_map = equilibrate_rows!(direct_psd_model)
