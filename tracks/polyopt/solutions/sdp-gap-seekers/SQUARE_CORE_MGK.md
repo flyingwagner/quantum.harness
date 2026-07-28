@@ -67,29 +67,23 @@ The independent hand fixture `H=Z`, basis `[X,Y]`, fixes the complex signs:
 `G_XY=+iζ(Z)−ζ(X)ζ(Y)`. Upper-triangle `Tr(AQ)` packing therefore uses
 `+2 Im(q)` for a `+i` coefficient, not a minus sign.
 
-## Shortest path to a status/audit runner
+## Status/audit boundary
 
 The reviewed typed byte grammar, Pauli/basis/row content IDs, normalization,
 stationarity, right-hand sides, feasibility objective, exact scalar-row
-mapping, and complex-to-real PSD rendering are now implemented and tested.
-The complete native canonical inventory and envelope now serialize all 247,540
-component records and independently validate full coverage. The remaining
-boundary is:
+mapping, and complex-to-real PSD rendering are implemented and tested. The
+complete native canonical inventory serializes all 247,540 component records.
 
-1. Add a conic-render envelope binding the core math hash, exact gamma,
-   normalization/stationarity row IDs, real cone coordinates, MOF SHA, source
-   commit, and environment.
-2. Extend `gap_status_runner_lib.jl` with a Square point. The source
-   gate must bind the Hamiltonian, `L`, `d`, basis manifests, core math hash,
-   conic-render hash, state class, exact γ, environment, and output MOF. Raw
-   solver status remains `unknown` unless an independently replayed witness or
-   ray passes.
-3. For a gating diff against legacy SpectralGap rather than another native
-   emitter, freeze the explicit source mapping and complete source-event trace.
+`SQUARE_STATUS_ENVELOPE.md` documents the next bounded component now
+implemented: a write-once `status=unsolved` envelope that requires a clean
+source tree, rebuilds and hash-matches the complete core, exactly replays the
+MOF, and binds the source commit/tree and locked environment. It invokes no
+optimizer and cannot support a Square gap claim.
 
-Acceptance for the eventual Square runner is: solver-free dry run reconstructs
-every source hash; the emitted MOF independently reproduces its coefficient
-tensor and exact setup; feasible status is never called a lower gap bound; and
-an infeasible endpoint becomes `Δ_bulk ≤ γ` only after a strict witness audit.
-Any future symmetry-restricted run needs an implemented, hashed action and a
-separate state-class label; it cannot reuse the unrestricted result.
+The remaining execution boundary is a separate immutable solver result
+envelope and independent witness replay. For a gating diff against legacy
+SpectralGap rather than another native emitter, the explicit source mapping
+and source-event trace must also be frozen. Feasible status is never a lower
+gap bound; an infeasible endpoint becomes `Δ_bulk ≤ γ` only after a strict
+witness audit. Any future symmetry-restricted run needs an implemented,
+hashed action and a separate state-class label.

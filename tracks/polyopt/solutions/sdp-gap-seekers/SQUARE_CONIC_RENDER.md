@@ -71,7 +71,9 @@ audit matched all 49 affine and 495,560 PSD coefficients and reported
 The patch is a local-consistency window for unrestricted infinite-volume KMS
 ground states with a flat structured basis and no symmetry quotient; it is not
 an open-boundary finite system. The artifact is a source-gated primal
-feasibility model, not a solve and not a Square bulk-gap bound. A status/audit
-runner still needs a conic evaluation envelope binding the now-complete
-canonical core tensor to the MOF and source/environment, plus independent
-replay of any returned infeasibility evidence.
+feasibility model, not a solve and not a Square bulk-gap bound.
+`SQUARE_STATUS_ENVELOPE.md` documents the implemented write-once evaluation
+envelope that rebuilds the core, replays the MOF, and binds
+source/environment while reporting `status=unsolved`. A future solve still
+requires a separate immutable result envelope and independent replay of any
+returned infeasibility evidence.

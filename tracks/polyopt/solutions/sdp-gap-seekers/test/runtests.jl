@@ -11,6 +11,14 @@ include(joinpath(@__DIR__, "gap_ray_verifier_tests.jl"))
 
 include(joinpath(@__DIR__, "..", "src", "SquareJ1J2Prototype.jl"))
 using .SquareJ1J2Prototype
+include(joinpath(@__DIR__, "..", "src", "GenericGapModel.jl"))
+using .GenericGapModel
+include(joinpath(@__DIR__, "..", "src", "CoreMGK.jl"))
+using .CoreMGK
+include(joinpath(@__DIR__, "..", "src", "SharedCoreWire.jl"))
+using .SharedCoreWire
+include(joinpath(@__DIR__, "..", "src", "SquareStatusEnvelope.jl"))
+using .SquareStatusEnvelope
 
 @testset "TFIM source-audit fail-closed row comparison" begin
     one = BigInt(1) // BigInt(1)
@@ -109,6 +117,131 @@ end
     @test occursin("source gate absent", finalize_text)
 end
 
+@testset "Square status envelope fail-closed contract" begin
+    digest = repeat("a", 64)
+    identity = (
+        L=1,
+        d=2,
+        g=BigInt(1) // BigInt(2),
+        gamma=BigInt(1) // BigInt(10),
+        state_class="unrestricted infinite-volume KMS ground states",
+        problem_sha256=digest,
+        positive_basis_sha256=digest,
+        gap_basis_sha256=digest,
+        scalar_rows=3,
+        affine_equalities=2,
+        psd_real_dimensions=[4, 2],
+    )
+    core = (
+        canonical_roundtrip=true,
+        envelope_valid=true,
+        derived_ids_valid=true,
+        coverage_valid=true,
+        source_rebuild_match=true,
+        optimizer_invoked=false,
+        math_sha256=digest,
+        envelope_sha256=digest,
+        math_byte_count=100,
+        blocks=2,
+        scalar_rows=3,
+        wiring_pairs=4,
+        component_records=5,
+        nonzero_coefficients=6,
+    )
+    audit = (
+        variables=3,
+        affine_equalities=2,
+        psd_dimensions=[4, 2],
+        affine_coefficients=7,
+        psd_coefficients=8,
+        exact_coefficient_match=true,
+        objective_sense=:feasibility,
+        optimizer_invoked=false,
+    )
+    first_result = build_square_status_envelope(
+        identity;
+        source_commit=repeat("b", 40),
+        source_tree=repeat("c", 40),
+        project_sha256=digest,
+        manifest_sha256=digest,
+        core_validation=core,
+        mof_sha256=digest,
+        mof_audit=audit,
+    )
+    second_result = build_square_status_envelope(
+        identity;
+        source_commit=repeat("b", 40),
+        source_tree=repeat("c", 40),
+        project_sha256=digest,
+        manifest_sha256=digest,
+        core_validation=core,
+        mof_sha256=digest,
+        mof_audit=audit,
+    )
+    @test first_result.bytes == second_result.bytes
+    @test first_result.sha256 == second_result.sha256
+    @test length(first_result.sha256) == 64
+    @test startswith(String(first_result.bytes), "AISQSTATUS1")
+    @test_throws ErrorException build_square_status_envelope(
+        identity;
+        source_commit=repeat("b", 39),
+        source_tree=repeat("c", 40),
+        project_sha256=digest,
+        manifest_sha256=digest,
+        core_validation=core,
+        mof_sha256=digest,
+        mof_audit=audit,
+    )
+    bad_core = merge(core, (coverage_valid=false,))
+    @test_throws ErrorException build_square_status_envelope(
+        identity;
+        source_commit=repeat("b", 40),
+        source_tree=repeat("c", 40),
+        project_sha256=digest,
+        manifest_sha256=digest,
+        core_validation=bad_core,
+        mof_sha256=digest,
+        mof_audit=audit,
+    )
+    stale_core = merge(core, (source_rebuild_match=false,))
+    @test_throws ErrorException build_square_status_envelope(
+        identity;
+        source_commit=repeat("b", 40),
+        source_tree=repeat("c", 40),
+        project_sha256=digest,
+        manifest_sha256=digest,
+        core_validation=stale_core,
+        mof_sha256=digest,
+        mof_audit=audit,
+    )
+    bad_audit = merge(audit, (exact_coefficient_match=false,))
+    @test_throws ErrorException build_square_status_envelope(
+        identity;
+        source_commit=repeat("b", 40),
+        source_tree=repeat("c", 40),
+        project_sha256=digest,
+        manifest_sha256=digest,
+        core_validation=core,
+        mof_sha256=digest,
+        mof_audit=bad_audit,
+    )
+    script = read(
+        joinpath(
+            @__DIR__,
+            "..",
+            "scripts",
+            "emit_square_status_envelope.jl",
+        ),
+        String,
+    )
+    @test occursin("build_square_core_inventory", script)
+    @test occursin("validate_square_core_inventory", script)
+    @test occursin("audit_rendered_mof", script)
+    @test occursin("status --porcelain --untracked-files=no", script)
+    @test occursin("status\\tunsolved", script)
+    @test !occursin("optimize!", script)
+end
+
 @testset "Pauli canonicalization" begin
     one, identity = pauli_word([(1, :X), (1, :X)])
     @test one == 1
@@ -178,9 +311,6 @@ using .LocalSpinIdentities
     @test checks["plaquette_projector_traces"] == (2, 9, 5)
     @test checks["joint_projector_traces"] == (1, 3, 3, 1, 3, 5)
 end
-
-include(joinpath(@__DIR__, "..", "src", "GenericGapModel.jl"))
-using .GenericGapModel
 
 @testset "generic solver-free problem adapter" begin
     for (L, expected_j1_bonds, expected_j2_bonds) in (
@@ -607,11 +737,6 @@ end
     push!(invalid_problem.patch.inner_ids, length(invalid_patch.sites) + 1)
     @test_throws ArgumentError basis_manifest(invalid_problem, :gap)
 end
-
-include(joinpath(@__DIR__, "..", "src", "CoreMGK.jl"))
-using .CoreMGK
-include(joinpath(@__DIR__, "..", "src", "SharedCoreWire.jl"))
-using .SharedCoreWire
 
 @testset "shared core canonical wire grammar" begin
     grammar_hex =

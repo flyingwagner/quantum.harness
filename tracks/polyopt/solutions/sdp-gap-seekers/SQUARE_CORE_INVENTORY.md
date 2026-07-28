@@ -63,6 +63,8 @@ same canonical payload object for both the stored record and ID preimage.
 
 This closes the native shared `core_mgk` inventory and envelope, but not legacy
 compatibility Gate C: no complete pinned SpectralGap source-event trace or
-frozen legacy mapping exists yet. It also does not include conic evaluation
-data such as gamma, stationarity, real cone coordinates, MOF hash, runtime, or
-solver evidence. Those require a distinct evaluation/render envelope.
+frozen legacy mapping exists yet. The distinct solver-free evaluation envelope
+is now implemented in `SQUARE_STATUS_ENVELOPE.md`; it binds gamma,
+stationarity/cone rendering, MOF, source, and environment with hard
+`status=unsolved` semantics. Runtime solver evidence still requires a separate
+immutable result envelope and independent replay.

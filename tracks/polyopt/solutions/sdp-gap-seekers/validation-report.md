@@ -13,13 +13,14 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `691/691` checks passed without optimization.
+Result on Julia 1.11.9: `705/705` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier  110
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
+Square status envelope fail-closed contract  14
 Pauli canonicalization                       10
 bare Pauli basis counts                      72
 full state-polynomial formal counts          13
@@ -73,6 +74,11 @@ A fresh exact source rebuild then replayed the full MOF: all 49 affine and
 coordinates/dimensions, and feasibility objective matched. This is a complete
 solver-free render audit, not just an inventory check.
 
+The Square status-envelope contract additionally fails closed on a stale core
+rebuild, invalid Git/hash identity, dirty tracked source, incomplete core
+coverage, or a mismatched MOF audit. Its emitted status is always `unsolved`;
+the envelope cannot report a Square gap bound.
+
 ## Canonical Square core inventory
 
 The complete native `core_mgk` artifact contains 161,886,794 canonical bytes,
@@ -125,10 +131,9 @@ estimate.
 
 ## Remaining boundary
 
-- a conic-render envelope binding the exact source to the emitted MOF;
 - a frozen legacy source mapping/event trace if Gate C compatibility with
   SpectralGap is required rather than a native-to-native tensor diff;
-- a source-gated Square MOF/status runner and independent conic replay;
+- a source-gated immutable Square solver result and independent witness replay;
 - any strictly audited Square infeasibility ray and resulting bulk-gap bound.
 
 No current output supports the phrase “certified Square J1-J2 bulk-gap bound.”
