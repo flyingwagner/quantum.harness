@@ -13,10 +13,10 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `687/687` checks passed without optimization.
+Result on Julia 1.11.9: `691/691` checks passed without optimization.
 
 ```text
-solver-free homogeneous conic-ray verifier  106
+solver-free homogeneous conic-ray verifier  110
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29

@@ -632,5 +632,14 @@ end
             RayMOI.ConstraintSet(),
             minimum_summary.normalization_constraint,
         ).value == 1.0
+
+        row_script = read(
+            joinpath(@__DIR__, "..", "scripts", "equilibrate_mof_rows.jl"),
+            String,
+        )
+        @test occursin("equilibrate_rows!(model)", row_script)
+        @test occursin("optimization_invoked\\tfalse", row_script)
+        @test occursin("refusing to overwrite output", row_script)
+        @test !occursin("optimize!", row_script)
     end
 end

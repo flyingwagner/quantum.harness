@@ -40,6 +40,18 @@ julia --project=julia-env --startup-file=no --history-file=no \
 
 This command parses and writes MOF only; it invokes no optimizer.
 
+An isolated positive row-equilibration variant can then be generated without
+variable scaling:
+
+```bash
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/equilibrate_mof_rows.jl \
+  NORMALIZED-RECESSION.mof.json.gz ROW-SCALED.mof.json.gz
+```
+
+Each scalar equality and both sides receive one positive power-of-two factor.
+This preserves the normalized feasible set exactly in real arithmetic.
+
 ## Kagome γ=1.272 prototype
 
 The immutable Kagome model becomes:
