@@ -359,9 +359,9 @@ function adapt_certify_result(raw)
         return (
             adapter="namedtuple-v1",
             flag=getproperty(raw, :flag),
-            termination=string(getproperty(raw, :termination)),
-            primal=string(getproperty(raw, :primal)),
-            dual=string(getproperty(raw, :dual)),
+            termination=Base.invokelatest(string, getproperty(raw, :termination)),
+            primal=Base.invokelatest(string, getproperty(raw, :primal)),
+            dual=Base.invokelatest(string, getproperty(raw, :dual)),
             objective=value_or_nothing(getproperty(raw, :objective)),
             objective_availability=(
                 hasproperty(raw, :objective_available) ?
