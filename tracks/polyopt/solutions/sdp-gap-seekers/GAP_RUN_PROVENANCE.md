@@ -1,5 +1,13 @@
 # Gap-cert run provenance — frozen for independent reproduction
 
+> **Historical legacy-run record.** The hashes below describe the earlier
+> integer-flag runs and are not the source gate for the raw-status rerun. The
+> safe runner in [`STATUS_RUNNER.md`](STATUS_RUNNER.md) uses the checked patch
+> SHA-256 `562c65cc5b4aad9e600a03558d3d22830a50e25dc00a6c4cacae6e9f38ac4281`
+> and patched `src/sdp.jl` SHA-256
+> `b1fa2280cca51fca38154daf5c767f7538ab68c2297e673eef474da3505f0ccc`;
+> it preserves raw statuses and protects unavailable objective values.
+
 > Frozen record of the turnkey `SpectralGap.jl` gap-certification runs, per the
 > 2026-07-28 coordination ask (independent SCNet dual-run to verify the
 > feasible/infeasible → gap-upper-bound direction). Anyone pulling

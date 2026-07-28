@@ -1,0 +1,87 @@
+[identity]
+name = "scnet-xh5"
+purpose = "SCNet xH5 development machine; separate from the cancon/scnet login"
+maintainer = "local xH5 account owner"
+
+[connection]
+repo_path_remote = "/work/home/sihhu/quantum-hackson/challenge-88/repo"
+login_shell = false
+
+[connection.ssh]
+alias = "xh5"
+
+[scheduler]
+type = "slurm"
+default_partition = "xhacnormalb"
+
+[[partitions]]
+name = "xhacnormalb"
+class = "default-cpu"
+cores = 128
+memory = "513500M"
+max_wall = "333-08:00:00"
+gpu = ""
+
+[[partitions]]
+name = "xhhgnormal"
+class = "gpu"
+cores = 64
+memory = "255500M"
+max_wall = "333-08:00:00"
+gpu = "NVIDIAGeForceRTX3080:4"
+
+[filesystem]
+home = "/work/home/sihhu"
+scratch = "/work/home/sihhu/quantum-hackson"
+project = "/work/home/sihhu/quantum-hackson/challenge-88/repo"
+quota = "25G home filesystem"
+
+[network]
+internet_from_login = true
+internet_from_compute = false
+
+[region]
+region = "mainland_china"
+
+[limits.hard]
+max_walltime = "08:00:00"
+max_nodes = 1
+max_cpus = 128
+max_array_size = 16
+
+[limits.soft]
+warn_walltime = "02:00:00"
+warn_cpus = 32
+unusual_partitions = ["xhhgnormal"]
+
+[limits.paths]
+allowed_roots = ["/work/home/sihhu/quantum-hackson/challenge-88"]
+
+[[documentation]]
+url = "https://www.scnet.cn/help/docs/mainsite/hpc/cmd/connect-to-hpc/"
+documents = "SCNet SSH connection provisioning"
+
+[[documentation]]
+url = "https://www.hpccube.com/doc/1.0.6/11250/general-handbook/scheduler/intro.html"
+documents = "Sugon/hpccube Slurm overview"
+
+[[gotchas]]
+symptom = "ssh scnet reaches a different SCNet development machine"
+cause = "the cancon and xH5 services have independent endpoints and credentials"
+fix = "use only the xh5 alias with this profile; never override scnet.toml's alias"
+
+[commands]
+squeue = "squeue -u $USER"
+sacct = "sacct --format=JobID,State,ExitCode,MaxRSS,Elapsed,AllocCPUS"
+sinfo = "sinfo -o '%P %a %.10l %.6D %.6t'"
+quota_command = "sacctmgr -n -P show assoc where user=$USER format=Account,Partition,QOS,GrpTRES,MaxTRES"
+
+[notes]
+text = """
+Live-probed 2026-07-28 on xH5: account giggleliu, QOS user_sihhu.
+xhacnormalb exposes 299 nodes, 128 CPUs and 513500M per node, with
+DefMemPerCPU=3931M and no required GRES. At probe time roughly 60 nodes had at
+least 16 idle CPUs and 50 had at least 32. The conservative harness limits are
+local safety ceilings, not scheduler maxima. This profile is deliberately not
+the older scnet.toml profile.
+"""
