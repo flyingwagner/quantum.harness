@@ -3,7 +3,8 @@
 module GapRayVerifier
 
 using LinearAlgebra
-import MathOptInterface as MOI
+import JuMP
+const MOI = JuMP.MOI
 const MOIU = MOI.Utilities
 
 function read_ray(path::AbstractString)
