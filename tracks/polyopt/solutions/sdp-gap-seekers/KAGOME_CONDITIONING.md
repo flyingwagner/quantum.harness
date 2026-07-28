@@ -75,14 +75,61 @@ julia --project=julia-env --startup-file=no --history-file=no \
   --preflight /path/to/audit.deduplicated.mof.json.gz
 ```
 
-Uniform row normalization also cannot validate this ray: the largest
-row-scaled residual is `5.200797932297734e-11`. Per-block positive rescaling is
-mathematically equivalent under a corresponding inverse coefficient scaling,
-but the appropriate factors require a fresh solver A/B and should not be
-chosen from a failed ray alone.
+Uniform row normalization alone cannot validate this ray: the largest
+row-scaled residual is `5.200797932297734e-11`.
 
 The completed xH5 run is reported in `KAGOME_AB_RESULT.md`. Deduplication
 reduced solve time, peak memory, and ray scale, but both new rays were rejected
 for normalized equality residual at `1e-12`; the deduplicated residual was
 worse. One exactly round-tripped block-equilibration A/B is therefore the next
 isolated experiment.
+
+## Power-of-two block/row equilibration
+
+`equilibrate_mof_columns.jl` now constructs that isolated experiment from the
+completed original A/B ray:
+
+1. every direct PSD matrix receives one uniform positive power-of-two variable
+   scale, so `X ⪰ 0` is equivalent to `Z ⪰ 0` under `X=sZ`;
+2. variables outside direct PSD blocks may receive independent positive
+   power-of-two scales;
+3. every scalar equality and both sides receive one positive power-of-two row
+   factor;
+4. each affine PSD block receives only one common positive factor;
+5. the objective receives one positive factor, preserving improvement
+   direction.
+
+Coordinate-wise scaling inside a direct PSD matrix is explicitly rejected.
+The first block-only prototype was mathematically equivalent but produced
+coefficients as large as `1.24e35`; it was not submitted and is preserved as a
+failed conditioning attempt. Composing row/objective normalization reduces the
+largest transformed column coefficient to `1.272`.
+
+For the original job `22986235` ray, the final map has nine direct PSD blocks,
+variable exponents `[-13,58]`, equality-row exponents `[-59,10]`, and objective
+exponent `-41`. It maps the old ray scale
+`4.319157242331815e17` to `1.9419280324476962`; the inverse map reproduces the
+original ray TSV byte-for-byte.
+
+```bash
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/equilibrate_mof_columns.jl \
+  ORIGINAL.mof.json.gz EQUILIBRATED.mof.json.gz SCALE.tsv \
+  ORIGINAL.variables.tsv
+
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/backtransform_mof_ray.jl \
+  SCALE.tsv SCALED.variables.tsv ORIGINAL-COORDINATES.variables.tsv
+```
+
+The equilibrated MOF SHA-256 is
+`830de74414ea3f1f16037376a9dfb3ec38fa01e31e5e80420f34c981a6411a83`.
+Its preflight preserves 54,944 variables, 15,671 equalities, and PSD
+dimensions `271,104,18,17,1,9,36,84,126`.
+
+The mapped old ray is deliberately not accepted in scaled coordinates: its
+small strengthening-block PSD defect becomes order one after balancing,
+instead of being hidden by the global `4.3e17` scale. This is precisely why a
+fresh solve can be informative. Any returned scaled ray must be inverse-mapped
+and replayed against the immutable original MOF at `1e-12`; the transformed
+model's own residual is not acceptance evidence.

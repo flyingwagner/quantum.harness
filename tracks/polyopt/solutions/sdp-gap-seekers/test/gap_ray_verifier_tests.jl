@@ -256,5 +256,170 @@ end
             ((1 => BigRational(1), 2 => BigRational(-1)), BigRational(3)),
             ((1 => BigRational(1), 2 => BigRational(1)), BigRational(4)),
         ])
+
+        scaled_model = RayMOI.Utilities.Model{Float64}()
+        scaled_variables = RayMOI.add_variables(scaled_model, 2)
+        small = ldexp(1.0, -20)
+        large = ldexp(1.0, 20)
+        scaled_equality = RayMOI.ScalarAffineFunction(
+            [
+                RayMOI.ScalarAffineTerm(small, scaled_variables[1]),
+                RayMOI.ScalarAffineTerm(large, scaled_variables[2]),
+            ],
+            0.0,
+        )
+        scaled_constraint = RayMOI.add_constraint(
+            scaled_model,
+            scaled_equality,
+            RayMOI.EqualTo(0.0),
+        )
+        scaled_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(small, scaled_variables[1])],
+            0.0,
+        )
+        RayMOI.set(scaled_model, RayMOI.ObjectiveSense(), RayMOI.MAX_SENSE)
+        RayMOI.set(
+            scaled_model,
+            RayMOI.ObjectiveFunction{typeof(scaled_objective)}(),
+            scaled_objective,
+        )
+        equilibration = column_equilibration(scaled_model)
+        @test equilibration.maxima == [small, large]
+        @test equilibration.exponents == [20, -20]
+        @test equilibration.scales == [large, small]
+        apply_variable_scaling!(scaled_model, equilibration)
+        transformed = RayMOI.get(
+            scaled_model,
+            RayMOI.ConstraintFunction(),
+            scaled_constraint,
+        )
+        @test [term.coefficient for term in transformed.terms] == [1.0, 1.0]
+        transformed_objective = RayMOI.get(
+            scaled_model,
+            RayMOI.ObjectiveFunction{
+                RayMOI.ScalarAffineFunction{Float64},
+            }(),
+        )
+        @test only(transformed_objective.terms).coefficient == 1.0
+        @test backtransform_ray([1.0, -1.0], equilibration.scales) ==
+              [large, -small]
+        @test transform_ray([large, -small], equilibration.scales) ==
+              [1.0, -1.0]
+        @test small * large + large * (-small) == 0.0
+        @test_throws ArgumentError backtransform_ray([1.0], equilibration.scales)
+
+        direct_psd_model = RayMOI.Utilities.Model{Float64}()
+        direct_psd_variables = RayMOI.add_variables(direct_psd_model, 3)
+        direct_psd_constraint = RayMOI.add_constraint(
+            direct_psd_model,
+            RayMOI.VectorOfVariables(direct_psd_variables),
+            RayMOI.PositiveSemidefiniteConeTriangle(2),
+        )
+        direct_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(1.0, direct_psd_variables[1])],
+            0.0,
+        )
+        RayMOI.set(
+            direct_psd_model,
+            RayMOI.ObjectiveSense(),
+            RayMOI.MAX_SENSE,
+        )
+        RayMOI.set(
+            direct_psd_model,
+            RayMOI.ObjectiveFunction{typeof(direct_objective)}(),
+            direct_objective,
+        )
+        ray_map = ray_equilibration(direct_psd_model, [4.0, 0.0, 1.0])
+        @test length(ray_map.direct_psd_groups) == 1
+        @test ray_map.exponents == [2, 2, 2]
+        @test ray_map.scales == [4.0, 4.0, 4.0]
+        apply_variable_scaling!(direct_psd_model, ray_map)
+        @test RayMOI.get(
+            direct_psd_model,
+            RayMOI.ConstraintFunction(),
+            direct_psd_constraint,
+        ) == RayMOI.VectorOfVariables(direct_psd_variables)
+        @test backtransform_ray([1.0, 0.0, 0.25], ray_map.scales) ==
+              [4.0, 0.0, 1.0]
+        row_map = equilibrate_rows!(direct_psd_model)
+        @test row_map.objective_exponent == -2
+        normalized_objective = RayMOI.get(
+            direct_psd_model,
+            RayMOI.ObjectiveFunction{
+                RayMOI.ScalarAffineFunction{Float64},
+            }(),
+        )
+        @test only(normalized_objective.terms).coefficient == 1.0
+        @test RayMOI.get(
+            direct_psd_model,
+            RayMOI.ConstraintFunction(),
+            direct_psd_constraint,
+        ) == RayMOI.VectorOfVariables(direct_psd_variables)
+
+        row_scaled_model = RayMOI.Utilities.Model{Float64}()
+        row_variable = RayMOI.add_variable(row_scaled_model)
+        row_equality = RayMOI.add_constraint(
+            row_scaled_model,
+            RayMOI.ScalarAffineFunction(
+                [RayMOI.ScalarAffineTerm(ldexp(1.0, 10), row_variable)],
+                2.0,
+            ),
+            RayMOI.EqualTo(4.0),
+        )
+        row_psd = RayMOI.add_constraint(
+            row_scaled_model,
+            RayMOI.VectorAffineFunction(
+                [
+                    RayMOI.VectorAffineTerm(
+                        1,
+                        RayMOI.ScalarAffineTerm(
+                            ldexp(1.0, 8),
+                            row_variable,
+                        ),
+                    ),
+                ],
+                [1.0],
+            ),
+            RayMOI.PositiveSemidefiniteConeTriangle(1),
+        )
+        row_objective = RayMOI.ScalarAffineFunction(
+            [RayMOI.ScalarAffineTerm(ldexp(1.0, 5), row_variable)],
+            0.0,
+        )
+        RayMOI.set(row_scaled_model, RayMOI.ObjectiveSense(), RayMOI.MAX_SENSE)
+        RayMOI.set(
+            row_scaled_model,
+            RayMOI.ObjectiveFunction{typeof(row_objective)}(),
+            row_objective,
+        )
+        row_summary = equilibrate_rows!(row_scaled_model)
+        @test row_summary.scalar_equalities == 1
+        @test row_summary.affine_psd_blocks == 1
+        normalized_equality = RayMOI.get(
+            row_scaled_model,
+            RayMOI.ConstraintFunction(),
+            row_equality,
+        )
+        @test only(normalized_equality.terms).coefficient == 1.0
+        @test normalized_equality.constant == ldexp(2.0, -10)
+        @test RayMOI.get(
+            row_scaled_model,
+            RayMOI.ConstraintSet(),
+            row_equality,
+        ).value == ldexp(4.0, -10)
+        normalized_psd = RayMOI.get(
+            row_scaled_model,
+            RayMOI.ConstraintFunction(),
+            row_psd,
+        )
+        @test only(normalized_psd.terms).scalar_term.coefficient == 1.0
+        @test only(normalized_psd.constants) == ldexp(1.0, -8)
+        normalized_row_objective = RayMOI.get(
+            row_scaled_model,
+            RayMOI.ObjectiveFunction{
+                RayMOI.ScalarAffineFunction{Float64},
+            }(),
+        )
+        @test only(normalized_row_objective.terms).coefficient == 1.0
     end
 end

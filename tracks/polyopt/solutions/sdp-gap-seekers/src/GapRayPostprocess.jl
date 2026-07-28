@@ -11,9 +11,13 @@ export BigRational,
     ExactAffineRow,
     ExactRayProblem,
     PSDDirectionBlock,
+    apply_variable_scaling!,
+    backtransform_ray,
+    column_equilibration,
     correct_with_private_pivots,
     deduplicate_affine_equalities!,
     equality_conditioning,
+    equilibrate_rows!,
     exact_residuals,
     extract_exact_problem,
     float_psd_minima,
@@ -22,7 +26,10 @@ export BigRational,
     objective_improvement,
     private_pivot_rows,
     psd_block_scales,
+    ray_equilibration,
     read_ray_values,
+    read_scale_map,
+    transform_ray,
     write_exact_ray
 
 struct ExactAffineRow
@@ -121,6 +128,578 @@ function deduplicate_affine_equalities!(model)
     )
 end
 
+function update_maximum!(
+    maxima::Dict{MOI.VariableIndex,Float64},
+    variable::MOI.VariableIndex,
+    coefficient::Real,
+)
+    value = abs(Float64(coefficient))
+    isfinite(value) || error("model contains a non-finite coefficient")
+    maxima[variable] = max(get(maxima, variable, 0.0), value)
+    return maxima
+end
+
+function scan_coefficients!(maxima, function_value::MOI.ScalarAffineFunction)
+    for term in function_value.terms
+        update_maximum!(maxima, term.variable, term.coefficient)
+    end
+    return maxima
+end
+
+function scan_coefficients!(maxima, function_value::MOI.VectorAffineFunction)
+    for term in function_value.terms
+        update_maximum!(
+            maxima,
+            term.scalar_term.variable,
+            term.scalar_term.coefficient,
+        )
+    end
+    return maxima
+end
+
+function scan_coefficients!(maxima, variable::MOI.VariableIndex)
+    update_maximum!(maxima, variable, 1.0)
+end
+
+function scan_coefficients!(maxima, variables::MOI.VectorOfVariables)
+    for variable in variables.variables
+        update_maximum!(maxima, variable, 1.0)
+    end
+    return maxima
+end
+
+function direct_psd_groups(model)
+    groups = Vector{Vector{MOI.VariableIndex}}()
+    owner = Dict{MOI.VariableIndex,Int}()
+    for (function_type, set_type) in MOI.get(
+        model,
+        MOI.ListOfConstraintTypesPresent(),
+    )
+        set_type <: MOI.PositiveSemidefiniteConeTriangle || continue
+        constraints = MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{function_type,set_type}(),
+        )
+        for constraint in constraints
+            function_value = MOI.get(
+                model,
+                MOI.ConstraintFunction(),
+                constraint,
+            )
+            function_value isa MOI.VectorOfVariables || continue
+            group = copy(function_value.variables)
+            for variable in group
+                haskey(owner, variable) &&
+                    error("one variable belongs to multiple direct PSD blocks")
+            end
+            push!(groups, group)
+            for variable in group
+                owner[variable] = length(groups)
+            end
+        end
+    end
+    return groups
+end
+
+function enforce_uniform_group_scales!(
+    scales,
+    exponents,
+    variables,
+    groups,
+    target_values,
+    exponent_sign::Int,
+)
+    positions = Dict(
+        variable => position for (position, variable) in enumerate(variables)
+    )
+    for group in groups
+        group_positions = [positions[variable] for variable in group]
+        target = maximum(target_values[position] for position in group_positions)
+        if iszero(target)
+            exponent = 0
+        else
+            exponent = exponent_sign * floor(Int, log2(target))
+        end
+        scale = ldexp(1.0, exponent)
+        isfinite(scale) && scale > 0 ||
+            error("direct PSD block scale is not finite and positive")
+        for position in group_positions
+            scales[position] = scale
+            exponents[position] = exponent
+        end
+    end
+    return nothing
+end
+
+"""
+Choose an invertible power-of-two substitution `x_i = scale_i * z_i` so the
+largest absolute affine/objective coefficient in each transformed column lies
+in `[1,2)`. Variable-domain `Reals` constraints are scale invariant and do not
+participate in the maxima.
+"""
+function column_equilibration(model)
+    variables = sort(
+        MOI.get(model, MOI.ListOfVariableIndices());
+        by=variable -> variable.value,
+    )
+    maxima = Dict(variable => 0.0 for variable in variables)
+    for (function_type, set_type) in MOI.get(
+        model,
+        MOI.ListOfConstraintTypesPresent(),
+    )
+        constraints = MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{function_type,set_type}(),
+        )
+        for constraint in constraints
+            function_value = MOI.get(
+                model,
+                MOI.ConstraintFunction(),
+                constraint,
+            )
+            if set_type <: MOI.Reals &&
+               (function_value isa MOI.VariableIndex ||
+                function_value isa MOI.VectorOfVariables)
+                continue
+            end
+            function_value isa Union{
+                MOI.ScalarAffineFunction,
+                MOI.VectorAffineFunction,
+                MOI.VectorOfVariables,
+            } || error(
+                "column equilibration does not support $(typeof(function_value)) in $(set_type)",
+            )
+            scan_coefficients!(maxima, function_value)
+        end
+    end
+    objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
+    objective = MOI.get(model, MOI.ObjectiveFunction{objective_type}())
+    objective isa Union{MOI.VariableIndex,MOI.ScalarAffineFunction} ||
+        error("column equilibration requires a scalar affine objective")
+    scan_coefficients!(maxima, objective)
+
+    scales = Float64[]
+    exponents = Int[]
+    for variable in variables
+        maximum_value = maxima[variable]
+        if iszero(maximum_value)
+            push!(scales, 1.0)
+            push!(exponents, 0)
+            continue
+        end
+        exponent = -floor(Int, log2(maximum_value))
+        scale = ldexp(1.0, exponent)
+        isfinite(scale) && scale > 0 ||
+            error("column equilibration scale is not finite and positive")
+        transformed = maximum_value * scale
+        1.0 <= transformed < 2.0 ||
+            error("power-of-two column equilibration invariant failed")
+        push!(scales, scale)
+        push!(exponents, exponent)
+    end
+    groups = direct_psd_groups(model)
+    # A direct PSD matrix variable may only be scaled uniformly by a positive
+    # scalar. Choose that scalar from the largest column coefficient in the
+    # whole block, then drop it from the cone constraint during rendering.
+    enforce_uniform_group_scales!(
+        scales,
+        exponents,
+        variables,
+        groups,
+        [maxima[variable] for variable in variables],
+        -1,
+    )
+    return (
+        variables=variables,
+        maxima=[maxima[variable] for variable in variables],
+        exponents=exponents,
+        scales=scales,
+        direct_psd_groups=groups,
+    )
+end
+
+"""
+Choose positive power-of-two scales from a reference ray. Direct PSD variables
+receive one uniform scale per matrix block; all other variables use their own
+nonzero magnitude. This is a formulation experiment only: the candidate must
+be back-transformed and replayed against the original model.
+"""
+function ray_equilibration(model, values::AbstractVector{<:Real})
+    variables = sort(
+        MOI.get(model, MOI.ListOfVariableIndices());
+        by=variable -> variable.value,
+    )
+    length(values) == length(variables) ||
+        throw(ArgumentError("reference ray length differs from model"))
+    all(isfinite, values) || error("reference ray contains non-finite values")
+    magnitudes = Float64.(abs.(values))
+    exponents = Int[]
+    scales = Float64[]
+    for magnitude in magnitudes
+        exponent = iszero(magnitude) ? 0 : floor(Int, log2(magnitude))
+        scale = ldexp(1.0, exponent)
+        isfinite(scale) && scale > 0 ||
+            error("reference-ray scale is not finite and positive")
+        push!(exponents, exponent)
+        push!(scales, scale)
+    end
+    groups = direct_psd_groups(model)
+    enforce_uniform_group_scales!(
+        scales,
+        exponents,
+        variables,
+        groups,
+        magnitudes,
+        1,
+    )
+    return (
+        variables=variables,
+        maxima=magnitudes,
+        exponents=exponents,
+        scales=scales,
+        direct_psd_groups=groups,
+    )
+end
+
+function scaled_function(
+    function_value::MOI.ScalarAffineFunction{Float64},
+    scales::Dict{MOI.VariableIndex,Float64},
+)
+    return MOI.ScalarAffineFunction(
+        [
+            MOI.ScalarAffineTerm(
+                term.coefficient * scales[term.variable],
+                term.variable,
+            )
+            for term in function_value.terms
+        ],
+        function_value.constant,
+    )
+end
+
+function scaled_function(
+    function_value::MOI.VectorAffineFunction{Float64},
+    scales::Dict{MOI.VariableIndex,Float64},
+)
+    return MOI.VectorAffineFunction(
+        [
+            MOI.VectorAffineTerm(
+                term.output_index,
+                MOI.ScalarAffineTerm(
+                    term.scalar_term.coefficient *
+                        scales[term.scalar_term.variable],
+                    term.scalar_term.variable,
+                ),
+            )
+            for term in function_value.terms
+        ],
+        copy(function_value.constants),
+    )
+end
+
+"""
+Apply `x_i = scale_i*z_i` in place to every affine constraint and scalar
+objective. The caller must preserve the returned map and back-transform a
+candidate ray before replay against the original model.
+"""
+function apply_variable_scaling!(model, equilibration=column_equilibration(model))
+    scale_by_variable = Dict(
+        variable => equilibration.scales[index]
+        for (index, variable) in enumerate(equilibration.variables)
+    )
+    for (function_type, set_type) in MOI.get(
+        model,
+        MOI.ListOfConstraintTypesPresent(),
+    )
+        constraints = collect(MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{function_type,set_type}(),
+        ))
+        for constraint in constraints
+            function_value = MOI.get(
+                model,
+                MOI.ConstraintFunction(),
+                constraint,
+            )
+            if set_type <: MOI.Reals &&
+               (function_value isa MOI.VariableIndex ||
+                function_value isa MOI.VectorOfVariables)
+                continue
+            end
+            if set_type <: MOI.PositiveSemidefiniteConeTriangle &&
+               function_value isa MOI.VectorOfVariables
+                block_scales = [
+                    scale_by_variable[variable]
+                    for variable in function_value.variables
+                ]
+                all(==(first(block_scales)), block_scales) ||
+                    error("direct PSD block does not have one uniform scale")
+                # x = s*z with s>0 gives x PSD iff z PSD. The common factor is
+                # therefore omitted from this cone constraint while it remains
+                # present in every affine occurrence of the variables.
+                continue
+            end
+            function_value isa Union{
+                MOI.ScalarAffineFunction{Float64},
+                MOI.VectorAffineFunction{Float64},
+            } || error(
+                "cannot scale constraint function $(typeof(function_value))",
+            )
+            MOI.set(
+                model,
+                MOI.ConstraintFunction(),
+                constraint,
+                scaled_function(function_value, scale_by_variable),
+            )
+        end
+    end
+    objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
+    objective = MOI.get(model, MOI.ObjectiveFunction{objective_type}())
+    if objective isa MOI.VariableIndex
+        objective = MOI.ScalarAffineFunction(
+            [MOI.ScalarAffineTerm(scale_by_variable[objective], objective)],
+            0.0,
+        )
+    elseif objective isa MOI.ScalarAffineFunction{Float64}
+        objective = scaled_function(objective, scale_by_variable)
+    else
+        error("cannot scale objective function $(typeof(objective))")
+    end
+    MOI.set(model, MOI.ObjectiveFunction{typeof(objective)}(), objective)
+    return equilibration
+end
+
+function backtransform_ray(
+    scaled_values::AbstractVector{<:Real},
+    scales::AbstractVector{<:Real},
+)
+    length(scaled_values) == length(scales) ||
+        throw(ArgumentError("scaled ray and scale map lengths differ"))
+    values = Float64[
+        Float64(scale) * Float64(value)
+        for (scale, value) in zip(scales, scaled_values)
+    ]
+    all(isfinite, values) || error("back-transformed ray is non-finite")
+    return values
+end
+
+function transform_ray(
+    original_values::AbstractVector{<:Real},
+    scales::AbstractVector{<:Real},
+)
+    length(original_values) == length(scales) ||
+        throw(ArgumentError("original ray and scale map lengths differ"))
+    values = Float64[
+        Float64(value) / Float64(scale)
+        for (scale, value) in zip(scales, original_values)
+    ]
+    all(isfinite, values) || error("transformed ray is non-finite")
+    return values
+end
+
+function reciprocal_power_of_two(maximum_value::Real)
+    value = abs(Float64(maximum_value))
+    isfinite(value) || error("row contains a non-finite magnitude")
+    iszero(value) && return 1.0, 0
+    exponent = -floor(Int, log2(value))
+    factor = ldexp(1.0, exponent)
+    transformed = value * factor
+    isfinite(factor) && factor > 0 ||
+        error("row equilibration factor is not finite and positive")
+    1.0 <= transformed < 2.0 ||
+        error("row equilibration invariant failed")
+    return factor, exponent
+end
+
+function scalar_maximum(function_value::MOI.ScalarAffineFunction, set)
+    return maximum(
+        (
+            abs(function_value.constant),
+            abs(set.value),
+            (abs(term.coefficient) for term in function_value.terms)...,
+        );
+        init=0.0,
+    )
+end
+
+function scale_scalar_function(function_value, factor)
+    return MOI.ScalarAffineFunction(
+        [
+            MOI.ScalarAffineTerm(
+                factor * term.coefficient,
+                term.variable,
+            )
+            for term in function_value.terms
+        ],
+        factor * function_value.constant,
+    )
+end
+
+function coordinate_factors(function_value::MOI.VectorAffineFunction)
+    maxima = abs.(function_value.constants)
+    for term in function_value.terms
+        maxima[term.output_index] = max(
+            maxima[term.output_index],
+            abs(term.scalar_term.coefficient),
+        )
+    end
+    factors = Float64[]
+    exponents = Int[]
+    for maximum_value in maxima
+        factor, exponent = reciprocal_power_of_two(maximum_value)
+        push!(factors, factor)
+        push!(exponents, exponent)
+    end
+    return factors, exponents
+end
+
+function scale_vector_coordinates(function_value, factors)
+    return MOI.VectorAffineFunction(
+        [
+            MOI.VectorAffineTerm(
+                term.output_index,
+                MOI.ScalarAffineTerm(
+                    factors[term.output_index] *
+                        term.scalar_term.coefficient,
+                    term.scalar_term.variable,
+                ),
+            )
+            for term in function_value.terms
+        ],
+        [
+            factors[index] * function_value.constants[index]
+            for index in eachindex(function_value.constants)
+        ],
+    )
+end
+
+"""
+Apply positive power-of-two row scaling after a variable substitution:
+
+- each scalar equality and both sides by one factor;
+- each coordinate of a vector-in-`Zeros` equality by its own factor;
+- each affine PSD matrix by one common factor;
+- the scalar objective by one positive factor.
+
+These operations preserve the feasible set and min/max improvement direction.
+"""
+function equilibrate_rows!(model)
+    scalar_equalities = 0
+    zero_coordinates = 0
+    affine_psd_blocks = 0
+    exponents = Int[]
+    for (function_type, set_type) in MOI.get(
+        model,
+        MOI.ListOfConstraintTypesPresent(),
+    )
+        constraints = collect(MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{function_type,set_type}(),
+        ))
+        for constraint in constraints
+            function_value = MOI.get(
+                model,
+                MOI.ConstraintFunction(),
+                constraint,
+            )
+            set = MOI.get(model, MOI.ConstraintSet(), constraint)
+            if set isa MOI.EqualTo &&
+               function_value isa MOI.ScalarAffineFunction{Float64}
+                factor, exponent =
+                    reciprocal_power_of_two(scalar_maximum(function_value, set))
+                MOI.set(
+                    model,
+                    MOI.ConstraintFunction(),
+                    constraint,
+                    scale_scalar_function(function_value, factor),
+                )
+                MOI.set(
+                    model,
+                    MOI.ConstraintSet(),
+                    constraint,
+                    MOI.EqualTo(factor * set.value),
+                )
+                push!(exponents, exponent)
+                scalar_equalities += 1
+            elseif set isa MOI.Zeros &&
+                   function_value isa MOI.VectorAffineFunction{Float64}
+                factors, coordinate_exponents =
+                    coordinate_factors(function_value)
+                MOI.set(
+                    model,
+                    MOI.ConstraintFunction(),
+                    constraint,
+                    scale_vector_coordinates(function_value, factors),
+                )
+                append!(exponents, coordinate_exponents)
+                zero_coordinates += length(factors)
+            elseif set isa MOI.PositiveSemidefiniteConeTriangle &&
+                   function_value isa MOI.VectorAffineFunction{Float64}
+                maximum_value = maximum(
+                    (
+                        maximum(abs, function_value.constants; init=0.0),
+                        maximum(
+                            (
+                                abs(term.scalar_term.coefficient)
+                                for term in function_value.terms
+                            );
+                            init=0.0,
+                        ),
+                    ),
+                )
+                factor, exponent =
+                    reciprocal_power_of_two(maximum_value)
+                factors = fill(factor, length(function_value.constants))
+                MOI.set(
+                    model,
+                    MOI.ConstraintFunction(),
+                    constraint,
+                    scale_vector_coordinates(function_value, factors),
+                )
+                push!(exponents, exponent)
+                affine_psd_blocks += 1
+            elseif set isa MOI.PositiveSemidefiniteConeTriangle &&
+                   function_value isa MOI.VectorOfVariables
+                nothing
+            elseif set isa MOI.Reals
+                nothing
+            else
+                error(
+                    "row equilibration does not support $(typeof(function_value)) in $(typeof(set))",
+                )
+            end
+        end
+    end
+
+    objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
+    objective = MOI.get(model, MOI.ObjectiveFunction{objective_type}())
+    objective isa MOI.ScalarAffineFunction{Float64} ||
+        error("row equilibration requires a scalar affine objective")
+    objective_maximum = maximum(
+        (
+            abs(objective.constant),
+            (abs(term.coefficient) for term in objective.terms)...,
+        );
+        init=0.0,
+    )
+    objective_factor, objective_exponent =
+        reciprocal_power_of_two(objective_maximum)
+    MOI.set(
+        model,
+        MOI.ObjectiveFunction{typeof(objective)}(),
+        scale_scalar_function(objective, objective_factor),
+    )
+    return (
+        scalar_equalities=scalar_equalities,
+        zero_coordinates=zero_coordinates,
+        affine_psd_blocks=affine_psd_blocks,
+        minimum_exponent=isempty(exponents) ? 0 : minimum(exponents),
+        maximum_exponent=isempty(exponents) ? 0 : maximum(exponents),
+        objective_exponent=objective_exponent,
+        objective_factor=objective_factor,
+    )
+end
+
 struct PSDDirectionBlock
     dimension::Int
     coordinates::Vector{ExactAffineRow}
@@ -176,6 +755,29 @@ function read_ray_values(path::AbstractString)
     end
     all(isfinite, values) || error("ray contains non-finite values")
     return moi_indices, values
+end
+
+function read_scale_map(path::AbstractString)
+    lines = readlines(path)
+    isempty(lines) && error("scale map is empty")
+    lines[1] ==
+        "ordinal\tmoi_index\tname\tcolumn_max\texponent\tx_per_z" ||
+        error("unexpected scale-map header")
+    scales = Float64[]
+    indices = Int[]
+    names = String[]
+    for (ordinal, line) in enumerate(lines[2:end])
+        fields = split(line, '\t'; keepempty=true)
+        length(fields) == 6 || error("malformed scale-map row")
+        parse(Int, fields[1]) == ordinal ||
+            error("noncanonical scale-map ordinal")
+        push!(indices, parse(Int, fields[2]))
+        push!(names, fields[3])
+        push!(scales, parse(Float64, fields[6]))
+    end
+    all(isfinite, scales) && all(>(0), scales) ||
+        error("scale map contains an invalid scale")
+    return indices, names, scales
 end
 
 function scalar_row(
