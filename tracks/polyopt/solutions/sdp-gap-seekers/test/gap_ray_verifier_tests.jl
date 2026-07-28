@@ -208,6 +208,79 @@ end
             exact_corrected,
         ).proved
 
+        triangular_problem = ExactRayProblem(
+            3,
+            [
+                ExactAffineRow([
+                    1 => BigRational(1),
+                    2 => BigRational(1),
+                ]),
+                ExactAffineRow([
+                    1 => BigRational(1),
+                    2 => BigRational(1),
+                ]),
+                ExactAffineRow([
+                    2 => BigRational(1),
+                    3 => BigRational(1),
+                ]),
+                ExactAffineRow([3 => BigRational(1)]),
+            ],
+            fill(zero(BigRational), 4),
+            PSDDirectionBlock[],
+            ExactAffineRow([1 => BigRational(1)]),
+            RayMOI.MAX_SENSE,
+        )
+        triangular = affine_peeling_analysis(triangular_problem)
+        @test triangular.duplicate_rows_removed == 1
+        @test triangular.peeled_unique_row_count == 3
+        @test triangular.peeled_original_row_count == 4
+        @test isempty(triangular.coupled_unique_row_indices)
+        triangular_corrected, triangular_unresolved, triangular_changes =
+            correct_with_affine_peeling(
+                triangular_problem,
+                BigRational[1, 2, 3],
+                triangular,
+            )
+        @test isempty(triangular_unresolved)
+        @test length(triangular_changes) == 3
+        @test all(
+            iszero,
+            exact_residuals(triangular_problem, triangular_corrected),
+        )
+
+        coupled_problem = ExactRayProblem(
+            2,
+            [
+                ExactAffineRow([
+                    1 => BigRational(1),
+                    2 => BigRational(1),
+                ]),
+                ExactAffineRow([
+                    1 => BigRational(1),
+                    2 => BigRational(-1),
+                ]),
+            ],
+            fill(zero(BigRational), 2),
+            PSDDirectionBlock[],
+            ExactAffineRow([1 => BigRational(1)]),
+            RayMOI.MAX_SENSE,
+        )
+        coupled = affine_peeling_analysis(coupled_problem)
+        @test coupled.peeled_unique_row_count == 0
+        @test coupled.coupled_unique_row_indices == [1, 2]
+        @test coupled.coupled_column_indices == [1, 2]
+        projection_script = read(
+            joinpath(
+                @__DIR__,
+                "..",
+                "scripts",
+                "analyze_affine_projection.jl",
+            ),
+            String,
+        )
+        @test occursin("optimizer_invoked\\tfalse", projection_script)
+        @test !occursin("optimize!", projection_script)
+
         indefinite_candidate = BigRational[1, 1, 2, 1]
         @test !rigorous_psd_proof(
             only(exact_problem.psd_blocks),

@@ -206,3 +206,18 @@ Row-equilibrated job `22988265` returned residual
 See `KAGOME_RECESSION_ROW_RESULT.md`. The conditioning cycle is closed:
 further scale-map variants are not justified without a new structural
 hypothesis.
+
+## Exact affine-projection structure
+
+The next structural hypothesis was tested without another solve. Exact
+homogeneous deduplication leaves 10,784 unique rows. Repeated leaf-column
+elimination produces a reverse-triangular exact correction plan for 5,806
+rows, but leaves 4,978 unique coupled rows on 12,283 columns. All 4,887
+duplicate copies belong to that coupled core, so it represents 9,865 of the
+15,671 original rows.
+
+This is the precise obstruction to reusing the TFIM private-pivot method.
+`KAGOME_AFFINE_PROJECTION.md` documents the solver-free command, artifact, and
+smallest next experiment: modular sparse rank/pivot selection, exact rational
+correction, then interval PSD validation. It does not change the conclusion
+that γ=1.272 is unknown.

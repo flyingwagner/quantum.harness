@@ -8,6 +8,8 @@ const MOIU = MOI.Utilities
 const BigRational = Rational{BigInt}
 
 export BigRational,
+    affine_peeling_analysis,
+    correct_with_affine_peeling,
     ExactAffineRow,
     ExactRayProblem,
     PSDDirectionBlock,
@@ -1358,6 +1360,137 @@ function private_pivot_rows(problem::ExactRayProblem; forbidden=Set{Int}())
                             first(sort(candidates; by=term -> (-abs(last(term)), first(term))))
     end
     return pivots
+end
+
+"""
+    affine_peeling_analysis(problem)
+
+Deduplicate the homogeneous equality rows, then repeatedly remove a row that
+has a variable occurring in only that row of the active system. The resulting
+order is an exact triangular projection plan. Rows left active form the
+coupled affine core that requires a genuinely multivariate exact solve.
+
+Affine offsets are intentionally ignored: this analyzes recession directions,
+for which only the homogeneous row coefficients apply.
+"""
+function affine_peeling_analysis(problem::ExactRayProblem)
+    representative_by_key = Dict{Any,Int}()
+    unique_row_indices = Int[]
+    member_rows = Vector{Vector{Int}}()
+    for (row_index, row) in enumerate(problem.equalities)
+        key = Tuple(row.terms)
+        position = get(representative_by_key, key, 0)
+        if position == 0
+            push!(unique_row_indices, row_index)
+            push!(member_rows, [row_index])
+            representative_by_key[key] = length(unique_row_indices)
+        else
+            push!(member_rows[position], row_index)
+        end
+    end
+
+    column_rows = [Int[] for _ in 1:problem.variable_count]
+    for (position, row_index) in enumerate(unique_row_indices)
+        for (column, _) in problem.equalities[row_index].terms
+            push!(column_rows[column], position)
+        end
+    end
+    active = trues(length(unique_row_indices))
+    active_occurrences = length.(column_rows)
+    queue = Int[
+        column
+        for column in eachindex(active_occurrences)
+        if active_occurrences[column] == 1
+    ]
+    cursor = 1
+    peel_order = Pair{Int,Int}[]
+    while cursor <= length(queue)
+        column = queue[cursor]
+        cursor += 1
+        active_occurrences[column] == 1 || continue
+        position = findfirst(
+            candidate -> active[candidate],
+            column_rows[column],
+        )
+        isnothing(position) && continue
+        unique_position = column_rows[column][something(position)]
+        active[unique_position] = false
+        push!(
+            peel_order,
+            unique_row_indices[unique_position] => column,
+        )
+        for (other_column, _) in
+            problem.equalities[unique_row_indices[unique_position]].terms
+            active_occurrences[other_column] -= 1
+            active_occurrences[other_column] == 1 &&
+                push!(queue, other_column)
+        end
+    end
+
+    coupled_positions = findall(active)
+    coupled_unique_row_indices = unique_row_indices[coupled_positions]
+    coupled_row_indices = sort!(reduce(
+        vcat,
+        (member_rows[position] for position in coupled_positions);
+        init=Int[],
+    ))
+    coupled_column_indices = sort!(unique(Int[
+        column
+        for row_index in coupled_unique_row_indices
+        for (column, _) in problem.equalities[row_index].terms
+    ]))
+    peeled_positions = findall(!, active)
+    return (
+        unique_row_indices=unique_row_indices,
+        duplicate_rows_removed=
+            length(problem.equalities) - length(unique_row_indices),
+        peel_order=peel_order,
+        peeled_unique_row_count=length(peel_order),
+        peeled_original_row_count=sum(
+            length(member_rows[position])
+            for position in peeled_positions;
+            init=0,
+        ),
+        coupled_unique_row_indices=coupled_unique_row_indices,
+        coupled_row_indices=coupled_row_indices,
+        coupled_column_indices=coupled_column_indices,
+        columns_outside_coupled_core=
+            problem.variable_count - length(coupled_column_indices),
+    )
+end
+
+"""
+    correct_with_affine_peeling(problem, values[, analysis])
+
+Apply exact reverse-triangular corrections to every row removed by
+`affine_peeling_analysis`. The coupled rows are returned unresolved and are
+not modified by any selected pivot column.
+"""
+function correct_with_affine_peeling(
+    problem::ExactRayProblem,
+    values::AbstractVector{BigRational},
+    analysis=affine_peeling_analysis(problem),
+)
+    length(values) == problem.variable_count ||
+        error("model/ray variable count mismatch")
+    corrected = copy(values)
+    corrections = Pair{Int,BigRational}[]
+    for (row_index, pivot_column) in Iterators.reverse(
+        analysis.peel_order,
+    )
+        row = problem.equalities[row_index]
+        pivot_terms = filter(
+            term -> first(term) == pivot_column,
+            row.terms,
+        )
+        length(pivot_terms) == 1 ||
+            error("affine peeling pivot is absent or duplicated")
+        coefficient = last(only(pivot_terms))
+        delta = -evaluate(row, corrected) / coefficient
+        corrected[pivot_column] += delta
+        push!(corrections, pivot_column => delta)
+    end
+    return corrected, analysis.coupled_row_indices, corrections
 end
 
 function correct_with_private_pivots(

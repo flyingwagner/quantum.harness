@@ -13,10 +13,10 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `711/711` checks passed without optimization.
+Result on Julia 1.11.9: `723/723` checks passed without optimization.
 
 ```text
-solver-free homogeneous conic-ray verifier  110
+solver-free homogeneous conic-ray verifier  122
 TFIM source-audit row comparison               6
 square patch geometry                        24
 status runner static safety gates            29
@@ -128,6 +128,10 @@ estimate.
 - Row-equilibrated unit-improvement job `22988265` changed that residual only
   to `9.133501e-11`; it too was rejected. The numerical conditioning cycle is
   closed without a Kagome certificate.
+- Exact duplicate/leaf-column analysis reduces the Kagome affine system to a
+  4,978-row, 12,283-column coupled rational core after exactly peelable
+  correction of 5,806 unique rows. This is the current strict-projection
+  obstruction; no tolerance or physical setup changed.
 
 ## Remaining boundary
 

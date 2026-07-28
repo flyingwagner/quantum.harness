@@ -68,6 +68,9 @@ implementation branch.
   the finite unit-improvement formulation and independent rejection.
 - [`KAGOME_RECESSION_ROW_RESULT.md`](KAGOME_RECESSION_ROW_RESULT.md):
   row-equilibrated finite-feasibility result and conditioning stop decision.
+- [`KAGOME_AFFINE_PROJECTION.md`](KAGOME_AFFINE_PROJECTION.md): exact
+  duplicate/triangular reduction and the residual coupled rational subsystem
+  that blocks strict Kagome projection.
 - [`KAGOME_AB_RESULT.md`](KAGOME_AB_RESULT.md): completed xH5
   original-versus-deduplicated solve and unchanged-tolerance replay.
 - [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,
