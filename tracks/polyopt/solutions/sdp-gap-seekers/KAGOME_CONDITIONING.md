@@ -218,6 +218,7 @@ duplicate copies belong to that coupled core, so it represents 9,865 of the
 
 This is the precise obstruction to reusing the TFIM private-pivot method.
 `KAGOME_AFFINE_PROJECTION.md` documents the solver-free command, artifact, and
-smallest next experiment: modular sparse rank/pivot selection, exact rational
-correction, then interval PSD validation. It does not change the conclusion
-that γ=1.272 is unknown.
+smallest next experiment. Maximum matching covers all 4,978 coupled rows, so
+the sparsity pattern has full row structural rank. Coefficient rank modulo
+multiple primes, exact rational correction, and interval PSD validation remain.
+This does not change the conclusion that γ=1.272 is unknown.

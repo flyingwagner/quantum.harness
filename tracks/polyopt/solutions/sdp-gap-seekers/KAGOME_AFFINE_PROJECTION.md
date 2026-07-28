@@ -34,27 +34,34 @@ outcome, not an optimizer or certificate failure. No optimizer is invoked.
 | peelable unique/original rows | 5,806 / 5,806 |
 | coupled unique/original rows | 4,978 / 9,865 |
 | columns in coupled core | 12,283 |
+| maximum pattern matching | 4,978 |
+| full row structural rank | true |
 | columns outside coupled core | 42,661 |
 
-The output SHA-256 is
+The matching-extended output is
+`.bohr-handoff/kagome-affine-projection-structure-matching.tsv`, SHA-256
+`9d10bc6d7d49be8b3eb3e43fd74ddd54037818c076717074911b6faab5f00491`.
+The earlier peel-only output is preserved with SHA-256
 `0a6a03e2d5672a966ac55730bf4a5773e593dc91a37189ee385bf50f61bd9ec7`.
 Synthetic tests prove complete reverse correction on a triangular fixture and
-fail closed on a two-row coupled core.
+distinguish a full coupled matching from a structurally rank-deficient
+fixture.
 
 ## Obstruction and smallest next experiment
 
 Private-pivot correction alone cannot close this Kagome point. All 4,887
 duplicate copies belong to representatives in the coupled core, and 4,978
 unique equations remain jointly supported on 12,283 columns. An exact
-certificate therefore needs a rank-revealing solve of that sparse rational
-subsystem, followed by exact residual verification and a rigorous PSD proof
-after correction.
+certificate therefore needs a coefficient-rank-revealing solve of that sparse
+rational subsystem, followed by exact residual verification and a rigorous
+PSD proof after correction. Maximum bipartite matching covers all 4,978 rows,
+so the pattern has full structural row rank; exact coefficient cancellation
+is the remaining rank question.
 
 The smallest next experiment is:
 
-1. find a full-row-rank pivot set for the 4,978×12,283 coupled matrix using
-   sparse structural matching plus rank checks modulo at least two large
-   primes;
+1. start from the complete structural matching and check the coefficient rank
+   of the 4,978×12,283 matrix modulo at least two large primes;
 2. solve the correction equations by modular reconstruction or fraction-free
    sparse elimination;
 3. verify every one of the 15,671 original rational rows exactly;

@@ -9,6 +9,7 @@ function main(args=ARGS)
     )
     problem = extract_exact_problem(args[1])
     analysis = affine_peeling_analysis(problem)
+    matching = coupled_structural_matching(problem, analysis)
     println("variable_count\t", problem.variable_count)
     println("original_equality_rows\t", length(problem.equalities))
     println("unique_homogeneous_rows\t", length(analysis.unique_row_indices))
@@ -21,12 +22,18 @@ function main(args=ARGS)
     )
     println("coupled_original_rows\t", length(analysis.coupled_row_indices))
     println("coupled_columns\t", length(analysis.coupled_column_indices))
+    println("coupled_structural_rank\t", matching.structural_rank)
+    println(
+        "full_row_structural_rank\t",
+        matching.full_row_structural_rank,
+    )
     println(
         "columns_outside_coupled_core\t",
         analysis.columns_outside_coupled_core,
     )
     println("optimizer_invoked\tfalse")
-    return isempty(analysis.coupled_unique_row_indices) ? 0 : 2
+    return isempty(analysis.coupled_unique_row_indices) ? 0 :
+        matching.full_row_structural_rank ? 2 : 3
 end
 
 exit(main())

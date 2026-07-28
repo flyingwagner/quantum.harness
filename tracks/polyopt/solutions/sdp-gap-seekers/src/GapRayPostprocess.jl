@@ -10,6 +10,7 @@ const BigRational = Rational{BigInt}
 export BigRational,
     affine_peeling_analysis,
     correct_with_affine_peeling,
+    coupled_structural_matching,
     ExactAffineRow,
     ExactRayProblem,
     PSDDirectionBlock,
@@ -1491,6 +1492,90 @@ function correct_with_affine_peeling(
         push!(corrections, pivot_column => delta)
     end
     return corrected, analysis.coupled_row_indices, corrections
+end
+
+"""
+    coupled_structural_matching(problem[, analysis])
+
+Compute a maximum row-to-column matching for the coupled core left by affine
+peeling. Its cardinality is the structural rank of the coefficient pattern,
+an upper bound on the exact coefficient rank. A full matching removes a
+sparsity obstruction but does not by itself prove exact full row rank.
+"""
+function coupled_structural_matching(
+    problem::ExactRayProblem,
+    analysis=affine_peeling_analysis(problem),
+)
+    rows = analysis.coupled_unique_row_indices
+    row_count = length(rows)
+    row_match = zeros(Int, row_count)
+    column_match = zeros(Int, problem.variable_count)
+    distance = fill(-1, row_count)
+
+    function augmenting_layers()
+        queue = Int[]
+        for row_position in eachindex(rows)
+            if row_match[row_position] == 0
+                distance[row_position] = 0
+                push!(queue, row_position)
+            else
+                distance[row_position] = -1
+            end
+        end
+        found_free_column = false
+        cursor = 1
+        while cursor <= length(queue)
+            row_position = queue[cursor]
+            cursor += 1
+            for (column, _) in problem.equalities[rows[row_position]].terms
+                matched_row = column_match[column]
+                if matched_row == 0
+                    found_free_column = true
+                elseif distance[matched_row] < 0
+                    distance[matched_row] = distance[row_position] + 1
+                    push!(queue, matched_row)
+                end
+            end
+        end
+        return found_free_column
+    end
+
+    function augment(row_position::Int)
+        for (column, _) in problem.equalities[rows[row_position]].terms
+            matched_row = column_match[column]
+            if matched_row == 0 ||
+               (
+                   distance[matched_row] == distance[row_position] + 1 &&
+                   augment(matched_row)
+               )
+                row_match[row_position] = column
+                column_match[column] = row_position
+                return true
+            end
+        end
+        distance[row_position] = -1
+        return false
+    end
+
+    matched = 0
+    while augmenting_layers()
+        for row_position in eachindex(rows)
+            if row_match[row_position] == 0 && augment(row_position)
+                matched += 1
+            end
+        end
+    end
+    unmatched_positions = findall(iszero, row_match)
+    return (
+        structural_rank=matched,
+        full_row_structural_rank=matched == row_count,
+        row_to_column=Pair{Int,Int}[
+            rows[position] => row_match[position]
+            for position in eachindex(rows)
+            if row_match[position] != 0
+        ],
+        unmatched_row_indices=rows[unmatched_positions],
+    )
 end
 
 function correct_with_private_pivots(

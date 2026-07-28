@@ -269,6 +269,33 @@ end
         @test coupled.peeled_unique_row_count == 0
         @test coupled.coupled_unique_row_indices == [1, 2]
         @test coupled.coupled_column_indices == [1, 2]
+        coupled_matching =
+            coupled_structural_matching(coupled_problem, coupled)
+        @test coupled_matching.structural_rank == 2
+        @test coupled_matching.full_row_structural_rank
+        @test isempty(coupled_matching.unmatched_row_indices)
+
+        structurally_deficient_problem = ExactRayProblem(
+            1,
+            [
+                ExactAffineRow([1 => BigRational(1)]),
+                ExactAffineRow([1 => BigRational(2)]),
+            ],
+            fill(zero(BigRational), 2),
+            PSDDirectionBlock[],
+            ExactAffineRow([1 => BigRational(1)]),
+            RayMOI.MAX_SENSE,
+        )
+        deficient = affine_peeling_analysis(
+            structurally_deficient_problem,
+        )
+        deficient_matching = coupled_structural_matching(
+            structurally_deficient_problem,
+            deficient,
+        )
+        @test deficient_matching.structural_rank == 1
+        @test !deficient_matching.full_row_structural_rank
+        @test length(deficient_matching.unmatched_row_indices) == 1
         projection_script = read(
             joinpath(
                 @__DIR__,
