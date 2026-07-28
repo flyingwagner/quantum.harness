@@ -52,6 +52,20 @@ An independent MOI preflight recovered 74,602 variables, four affine
 equalities, two PSD constraints with dimensions 1406 and 14, and
 `optimization_invoked=false`.
 
+The stronger exact replay command is:
+
+```bash
+julia --project=julia-env --startup-file=no --history-file=no \
+  tracks/polyopt/solutions/sdp-gap-seekers/scripts/audit_square_conic_mof.jl \
+  .bohr-handoff/square-l1-d2-g0p5-gamma0p1.mof.json.gz
+```
+
+It rebuilds the exact source plan, independently parses the MOF, and compares
+every variable name/order, right-hand side, affine coefficient, real PSD
+coordinate/coefficient, cone dimension, and objective sense. The measured
+audit matched all 49 affine and 495,560 PSD coefficients and reported
+`exact_coefficient_match=true`, `optimizer_invoked=false`.
+
 ## Interpretation boundary
 
 The patch is a local-consistency window for unrestricted infinite-volume KMS

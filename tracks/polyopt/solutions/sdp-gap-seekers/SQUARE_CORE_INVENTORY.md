@@ -15,6 +15,9 @@ It includes:
 
 Numeric gamma is not part of the math bytes. It belongs to a later conic
 evaluation that derives `A_gamma = K - gamma(G_moment + G_product)`.
+This was tested by independent full reconstructions at gamma `1/10` and `1/5`:
+both math files and both envelopes are byte-for-byte identical, not merely
+equal by digest.
 
 ## Emit and validate
 
@@ -29,6 +32,9 @@ julia --project=julia-env --startup-file=no --history-file=no \
   .bohr-handoff/square-l1-d2-g0p5.core.aicore \
   .bohr-handoff/square-l1-d2-g0p5.core.aicoreenv
 ```
+
+An optional third emitter argument selects a different exact gamma solely to
+test this separation, for example `1/5`.
 
 For `L=1,d=2,g=1/2`, emission took about 7½ minutes. The validator independently
 parsed and byte-identically re-encoded the 161,886,794-byte artifact, then
@@ -60,4 +66,3 @@ compatibility Gate C: no complete pinned SpectralGap source-event trace or
 frozen legacy mapping exists yet. It also does not include conic evaluation
 data such as gamma, stationarity, real cone coordinates, MOF hash, runtime, or
 solver evidence. Those require a distinct evaluation/render envelope.
-

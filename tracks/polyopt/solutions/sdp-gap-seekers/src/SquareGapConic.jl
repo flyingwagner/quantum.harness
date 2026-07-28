@@ -29,6 +29,7 @@ export ExactAffineConstraint,
     RealPSDPlan,
     RealPSDTerm,
     SquareConicPlan,
+    audit_rendered_mof,
     build_square_conic_plan,
     realify_hermitian_coefficient,
     render_mof
@@ -444,6 +445,139 @@ function render_mof(plan::SquareConicPlan, output_path::AbstractString)
         variables=length(variables),
         affine_equalities=1 + length(plan.stationarity),
         psd_dimensions=[block.real_dimension for block in plan.psd_blocks],
+        objective_sense=:feasibility,
+        optimizer_invoked=false,
+    )
+end
+
+function accumulated_scalar_terms(function_value, variable_positions)
+    result = Dict{Int,Float64}()
+    for term in function_value.terms
+        position = variable_positions[term.variable]
+        value = get(result, position, 0.0) + term.coefficient
+        iszero(value) ? delete!(result, position) : (result[position] = value)
+    end
+    return result
+end
+
+function accumulated_vector_terms(function_value, variable_positions)
+    result = Dict{Tuple{Int,Int},Float64}()
+    for term in function_value.terms
+        position = variable_positions[term.scalar_term.variable]
+        key = (term.output_index, position)
+        value = get(result, key, 0.0) + term.scalar_term.coefficient
+        iszero(value) ? delete!(result, key) : (result[key] = value)
+    end
+    return result
+end
+
+"""
+Independently parse a rendered MOF and compare every affine and PSD coefficient
+to the exact source plan after the declared checked Float64 conversion.
+No optimizer is constructed.
+"""
+function audit_rendered_mof(plan::SquareConicPlan, model_path::AbstractString)
+    model = MOI.FileFormats.Model(filename=String(model_path))
+    MOI.read_from_file(model, String(model_path))
+    variables = sort!(
+        MOI.get(model, MOI.ListOfVariableIndices());
+        by=variable -> variable.value,
+    )
+    length(variables) == length(plan.rows) ||
+        error("MOF variable count differs from the exact conic plan")
+    variable_positions = Dict(
+        variable => position for (position, variable) in enumerate(variables)
+    )
+    for (position, variable) in enumerate(variables)
+        expected_name = "y:$position:$(plan.row_ids[position])"
+        MOI.get(model, MOI.VariableName(), variable) == expected_name ||
+            error("MOF variable name/order differs from the exact conic plan")
+    end
+
+    equality_indices = sort!(
+        MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{
+                MOI.ScalarAffineFunction{Float64},
+                MOI.EqualTo{Float64},
+            }(),
+        );
+        by=constraint -> constraint.value,
+    )
+    exact_equalities = [plan.normalization; plan.stationarity]
+    length(equality_indices) == length(exact_equalities) ||
+        error("MOF affine-equality count differs from the exact conic plan")
+    for (constraint_index, exact_constraint) in
+        zip(equality_indices, exact_equalities)
+        function_value = MOI.get(
+            model,
+            MOI.ConstraintFunction(),
+            constraint_index,
+        )
+        set_value = MOI.get(model, MOI.ConstraintSet(), constraint_index)
+        iszero(function_value.constant) ||
+            error("MOF affine equality has a nonzero function constant")
+        set_value.value == checked_float(exact_constraint.rhs) ||
+            error("MOF affine right-hand side differs from the exact plan")
+        expected_terms = Dict(
+            row_index => checked_float(coefficient)
+            for (row_index, coefficient) in exact_constraint.terms
+        )
+        accumulated_scalar_terms(function_value, variable_positions) ==
+            expected_terms ||
+            error("MOF affine coefficients differ from the exact plan")
+    end
+
+    psd_indices = sort!(
+        MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{
+                MOI.VectorAffineFunction{Float64},
+                MOI.PositiveSemidefiniteConeTriangle,
+            }(),
+        );
+        by=constraint -> constraint.value,
+    )
+    length(psd_indices) == length(plan.psd_blocks) ||
+        error("MOF PSD-block count differs from the exact conic plan")
+    for (constraint_index, block) in zip(psd_indices, plan.psd_blocks)
+        function_value = MOI.get(
+            model,
+            MOI.ConstraintFunction(),
+            constraint_index,
+        )
+        set_value = MOI.get(model, MOI.ConstraintSet(), constraint_index)
+        set_value.side_dimension == block.real_dimension ||
+            error("MOF PSD dimension differs from the exact conic plan")
+        all(iszero, function_value.constants) ||
+            error("MOF PSD function contains a nonzero constant")
+        expected_terms = Dict(
+            (term.output_index, term.row_index) =>
+                checked_float(term.coefficient)
+            for term in block.terms
+        )
+        accumulated_vector_terms(function_value, variable_positions) ==
+            expected_terms ||
+            error("MOF PSD coefficients differ from the exact conic plan")
+    end
+    MOI.get(model, MOI.ObjectiveSense()) == MOI.FEASIBILITY_SENSE ||
+        error("MOF objective sense is not feasibility")
+    isempty(plan.objective_terms) ||
+        error("exact conic plan unexpectedly has objective terms")
+    return (
+        variables=length(variables),
+        affine_equalities=length(equality_indices),
+        psd_dimensions=[
+            MOI.get(model, MOI.ConstraintSet(), constraint).side_dimension
+            for constraint in psd_indices
+        ],
+        affine_coefficients=sum(length, (
+            constraint.terms for constraint in exact_equalities
+        )),
+        psd_coefficients=sum(length, (
+            block.terms for block in plan.psd_blocks
+        )),
+        exact_coefficient_match=true,
         objective_sense=:feasibility,
         optimizer_invoked=false,
     )

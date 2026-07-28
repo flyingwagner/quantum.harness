@@ -13,7 +13,7 @@ julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result on Julia 1.11.9: `635/635` checks passed without optimization.
+Result on Julia 1.11.9: `640/640` checks passed without optimization.
 
 ```text
 solver-free homogeneous conic-ray verifier   59
@@ -30,7 +30,7 @@ structured basis manifests                  100
 shared core canonical wire grammar           17
 complex Hermitian to real PSD rendering        5
 Square shared-core inventory declarations      9
-solver-free Square conic render               15
+solver-free Square conic render               20
 exact core M/G/K pair algebra                23
 Square J1-J2 core M/G/K source gate         125
 small finite-patch ED construction oracle     3
@@ -64,6 +64,11 @@ equalities, complex PSD blocks 703 and 7 rendered as real PSD blocks 1406 and
 variables, four equalities, and the two expected PSD dimensions.
 Both emitter and reader report that optimization was not invoked.
 
+A fresh exact source rebuild then replayed the full MOF: all 49 affine and
+495,560 PSD coefficients, variable names/order, right-hand sides, cone
+coordinates/dimensions, and feasibility objective matched. This is a complete
+solver-free render audit, not just an inventory check.
+
 ## Canonical Square core inventory
 
 The complete native `core_mgk` artifact contains 161,886,794 canonical bytes,
@@ -74,6 +79,9 @@ An independent two-minute validation passed byte-identical decode/re-encode,
 the envelope and eight section hashes, all derived IDs and references,
 Hermitian diagonal reality, exact nonzero/zero record rules, and complete
 pair/component coverage. No optimizer was invoked.
+Independent full builds at gamma `1/10` and `1/5` produced byte-for-byte
+identical math artifacts and envelopes, proving the symbolic core identity is
+separate from numerical threshold evaluation in this implementation.
 
 ## Small ED oracle
 

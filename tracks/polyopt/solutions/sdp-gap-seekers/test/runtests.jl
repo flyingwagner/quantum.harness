@@ -826,6 +826,12 @@ end
             JuMP.MOI.get(model, JuMP.MOI.ConstraintSet(), constraint).side_dimension
             for constraint in psd_constraints
         ] == [2, 2]
+        audit = audit_rendered_mof(plan, path)
+        @test audit.variables == 1
+        @test audit.affine_equalities == 1
+        @test audit.psd_dimensions == [2, 2]
+        @test audit.exact_coefficient_match
+        @test audit.optimizer_invoked == false
     end
 end
 
