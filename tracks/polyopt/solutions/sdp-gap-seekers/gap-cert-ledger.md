@@ -37,7 +37,9 @@ statement **Δ ≤ γ_upper**.
 ## Current audited ledger
 
 The source solve is `b1a1cad`; the independent replay implementation is
-`8c6106f`. These rows are floating-point evidence, not formal certificates.
+`8c6106f`. The Kagome row remains floating-point evidence. The TFIM row adds
+strict post-processing for the reconstructed rational conic model, but not yet
+an end-to-end formal physical bound.
 
 | model | config | numerical transition | independent evidence | conclusion |
 |---|---|---|---|---|
@@ -50,13 +52,16 @@ The source solve is `b1a1cad`; the independent replay implementation is
   the reconstructed conic model. The remaining gate is equality between that
   reconstruction and the intended state-polynomial assembly.
 - **Kagome:** the transition is numerical only. Do not move an upper bound
-  through γ=1.272; the available ray fails the equality audit.
+  through γ=1.272; the available ray fails the equality audit. A solver-free
+  audit finds 4,887 exact duplicate equalities and about 20 orders of conic
+  block scale separation; exact deduplication is ready for an xH5 A/B solve.
 - **Square J1-J2:** no status/audit runner or gap number exists yet.
 
 ## Open items
 
-1. Exact or interval post-process the accepted TFIM floating ray.
-2. Run a source-locked Kagome conditioning A/B experiment; do not loosen the
-   verifier tolerance.
+1. Freeze and diff the TFIM source assembly against the intended rational
+   coefficient/support contract.
+2. Run the source-locked Kagome original-versus-deduplicated A/B experiment;
+   do not loosen the verifier tolerance.
 3. Connect the structured Square basis to a source-gated coefficient assembly
    and three-way status/audit runner.

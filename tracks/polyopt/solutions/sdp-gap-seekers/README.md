@@ -55,6 +55,8 @@ implementation branch.
 - [`STRICT_CERTIFICATE.md`](STRICT_CERTIFICATE.md): exact rational projection
   and interval-PSD post-processing for the supplied TFIM conic ray, including
   the remaining source-assembly proof boundary.
+- [`KAGOME_CONDITIONING.md`](KAGOME_CONDITIONING.md): solver-free γ=1.272
+  conditioning diagnosis and exact equality-deduplication experiment.
 
 The geometry/model prototype uses Julia standard libraries only and does not
 assemble or solve an SDP. The audit utilities use the declared JuMP/MOI file

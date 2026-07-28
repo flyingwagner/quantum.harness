@@ -7,11 +7,11 @@ physical meaning to `flag`.
 
 Source gate: SpectralGap base
 `a1171c906ff2cc2901e58c2426397a2f68c32bb7`, checked patch SHA-256
-`5ef9585c71b84b7a07b36610e2bc8aab060a40a8b5062633b070c92dc74fc947`,
+`332c0931ac810289aa3713af0948f259c01189270706af58b262d60d994d4abd`,
 patched `src/SpectralGap.jl` SHA-256
 `940cd72b9c4bea39b6daaefd2b9797c54df450cb0afbfb4d9322b2df1b3838bb`,
 patched `src/sdp.jl` SHA-256
-`b1fa2280cca51fca38154daf5c767f7538ab68c2297e673eef474da3505f0ccc`.
+`4ea362723bd7601e67db3bc27f21a4a11506791ce2b9b82cb7e4a60b0f6bae10`.
 The patch intentionally adds no package dependency: in particular it does not
 import Clarabel, which is absent from SpectralGap's upstream `Project.toml`.
 

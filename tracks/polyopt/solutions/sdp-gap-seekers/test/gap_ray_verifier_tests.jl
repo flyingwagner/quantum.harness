@@ -69,6 +69,36 @@ function write_synthetic_ray(path::AbstractString, values)
     return path
 end
 
+function write_duplicate_equality_model(path::AbstractString)
+    model = RayMOI.Utilities.Model{Float64}()
+    variables = RayMOI.add_variables(model, 2)
+    function vector_term(output, coefficient, variable)
+        return RayMOI.VectorAffineTerm(
+            output,
+            RayMOI.ScalarAffineTerm(coefficient, variable),
+        )
+    end
+    duplicate_vector = RayMOI.VectorAffineFunction(
+        [
+            vector_term(1, 1.0, variables[1]),
+            vector_term(1, -1.0, variables[2]),
+            vector_term(2, 1.0, variables[1]),
+            vector_term(2, -1.0, variables[2]),
+            vector_term(3, 1.0, variables[1]),
+            vector_term(3, 1.0, variables[2]),
+        ],
+        [3.0, 3.0, 4.0],
+    )
+    RayMOI.add_constraint(model, duplicate_vector, RayMOI.Zeros(3))
+    RayMOI.set(model, RayMOI.ObjectiveSense(), RayMOI.MAX_SENSE)
+    RayMOI.set(
+        model,
+        RayMOI.ObjectiveFunction{RayMOI.VariableIndex}(),
+        variables[1],
+    )
+    RayMOI.write_to_file(model, path)
+end
+
 @testset "solver-free homogeneous conic-ray verifier" begin
     mktempdir() do directory
         max_model = joinpath(directory, "max.mof.json")
@@ -136,6 +166,24 @@ end
         @test pathological.max_equality_residual_relative < 1.01e-10
         @test pathological.rejection_reasons == ("equality_residual",)
 
+        conditioning = equality_conditioning(
+            extract_exact_problem(max_model),
+            [1.0e16, 1.0e16 - 1.0e6, 0.0, 1.0e12],
+        )
+        @test conditioning[1].residual_high_precision == 1.0e6
+        @test conditioning[1].backward_error > 4.9e-11
+        @test conditioning[1].backward_error < 5.1e-11
+        @test conditioning[1].row_scaled_residual == 1.0e-10
+        @test conditioning[1].summation_difference == 0.0
+
+        block_scales = psd_block_scales(
+            extract_exact_problem(max_model),
+            [1.0e16, 1.0e16 - 1.0e6, 0.0, 1.0e12],
+        )
+        @test only(block_scales).dimension == 2
+        @test only(block_scales).maximum == 1.0e16
+        @test only(block_scales).minimum_nonzero == 1.0e16 - 1.0e6
+
         @test_throws ArgumentError GapRayVerifier.verify(
             max_model,
             write_synthetic_ray(joinpath(directory, "bad-tol.tsv"), [1, 1, 0, 1]);
@@ -143,6 +191,7 @@ end
         )
 
         exact_problem = extract_exact_problem(max_model; coefficient_tolerance=1e-14)
+        @test exact_problem.equality_offsets == BigRational[0]
         exact_candidate, _, _ = normalize_rational_ray(
             [1.0, 1.0, 0.0, 1.0];
             rational_tolerance=1e-12,
@@ -183,5 +232,29 @@ end
         exact_path = joinpath(directory, "exact-ray.tsv")
         write_exact_ray(exact_path, exact_corrected)
         @test readlines(exact_path)[1] == "ordinal\tnumerator\tdenominator"
+
+        duplicate_path = joinpath(directory, "duplicate.mof.json")
+        deduplicated_path = joinpath(directory, "deduplicated.mof.json")
+        write_duplicate_equality_model(duplicate_path)
+        duplicate_model = RayMOI.FileFormats.Model(filename=duplicate_path)
+        RayMOI.read_from_file(duplicate_model, duplicate_path)
+        deduplication = deduplicate_affine_equalities!(duplicate_model)
+        @test deduplication.scalar_equalities_removed == 0
+        @test deduplication.vector_zero_coordinates_removed == 1
+        @test deduplication.total_removed == 1
+        @test length(RayMOI.get(duplicate_model, RayMOI.ListOfVariableIndices())) == 2
+        RayMOI.write_to_file(duplicate_model, deduplicated_path)
+        deduplicated = extract_exact_problem(deduplicated_path)
+        @test length(deduplicated.equalities) == 2
+        @test Set(
+            (Tuple(row.terms), offset) for
+            (row, offset) in zip(
+                deduplicated.equalities,
+                deduplicated.equality_offsets,
+            )
+        ) == Set([
+            ((1 => BigRational(1), 2 => BigRational(-1)), BigRational(3)),
+            ((1 => BigRational(1), 2 => BigRational(1)), BigRational(4)),
+        ])
     end
 end
