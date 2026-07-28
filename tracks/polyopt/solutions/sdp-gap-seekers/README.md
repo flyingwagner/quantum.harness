@@ -57,6 +57,10 @@ implementation branch.
   the remaining source-assembly proof boundary.
 - [`KAGOME_CONDITIONING.md`](KAGOME_CONDITIONING.md): solver-free γ=1.272
   conditioning diagnosis and exact equality-deduplication experiment.
+- [`structured-basis-manifest.md`](structured-basis-manifest.md): materialized,
+  versioned Square basis rows and hashes.
+- [`SQUARE_CORE_MGK.md`](SQUARE_CORE_MGK.md): exact Square `M/G/K` pair algebra,
+  full solver-free pair-coverage gate, and the remaining conic-runner boundary.
 
 The geometry/model prototype uses Julia standard libraries only and does not
 assemble or solve an SDP. The audit utilities use the declared JuMP/MOI file

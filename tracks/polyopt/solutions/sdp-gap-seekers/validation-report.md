@@ -1,97 +1,78 @@
-# Lightweight validation report
+# Solver-free validation report
 
-No state-polynomial SDP was assembled or solved. These checks validate only
-geometry, algebra, normalization, basis bookkeeping, and a finite-patch
-Hamiltonian oracle.
+No Square J1-J2 conic model was assembled or solved. The checks below cover
+geometry, exact Pauli algebra, basis identity, exact `M/G/K` pair coefficients,
+exported-ray replay, and certificate post-processing. Solver status by itself
+is never promoted to a physical gap claim.
 
 ## Julia unit suite
 
-Command:
-
 ```bash
-julia --startup-file=no \
+julia --project=julia-env --startup-file=no --history-file=no \
   tracks/polyopt/solutions/sdp-gap-seekers/test/runtests.jl
 ```
 
-Result: `182/182` checks passed.
+Result on Julia 1.11.9: `583/583` checks passed without optimization.
 
 ```text
-square patch geometry                       24
-Pauli canonicalization                     10
-bare Pauli basis counts                    72
-full state-polynomial formal counts        13
-storage estimates                           2
-exact local spin identities                22
-generic solver-free problem adapter        36
-small finite-patch ED construction oracle   3
+solver-free homogeneous conic-ray verifier   59
+square patch geometry                        24
+status runner static safety gates            29
+Pauli canonicalization                       10
+bare Pauli basis counts                      72
+full state-polynomial formal counts          13
+storage estimates                             2
+exact local spin identities                  22
+generic solver-free problem adapter          43
+structured basis manifests                  100
+exact core M/G/K pair algebra                23
+Square J1-J2 core M/G/K source gate         125
+small finite-patch ED construction oracle     3
+solver-free status runner contract           58
 ```
+
+The homogeneous-ray fixtures distinguish accepted improving rays from equality,
+PSD, and objective-sign failures. They also cover affine recession directions,
+scale invariance, and the Kagome-size cancellation pathology.
+
+## Square exact-core gate
+
+`check_square_core_mgk.jl` exhausts the `L=1,d=2,g=1/2` structured-basis upper
+triangles: 247,456 positive pairs and 28 gap pairs, producing the required
+247,540 component records. Every lower-triangle coefficient is independently
+recomputed from swapped inputs and equals the conjugate upper entry. The run
+references 74,602 canonical scalar rows and invokes no solver.
+
+The separate `H=Z`, basis `[X,Y]` fixture fixes the symmetrized commutator and
+complex-packing signs. Float Hamiltonian coefficients and unapplied symmetry
+metadata are rejected.
 
 ## Small ED oracle
 
-Setup:
+For the finite 3×3 internal-bond Hamiltonian at `g=1/2`, two independent matrix
+builders agree exactly. Hermiticity, trace, and total-`Sᶻ` commutator residuals
+are zero; the ground residual is `3.34e-15`. Its first distinct finite-window
+separation `0.6877583922161636` is only an algebra oracle and is not a bulk-gap
+estimate.
 
-```text
-Hamiltonian:
-  H = Σ_NN S_i·S_j + (1/2) Σ_NNN S_i·S_j
-normalization: S=σ/2
-finite oracle geometry: Λ_1=[-1,1]², internal bonds only
-sites / Hilbert dimension: 9 / 512
-sector: full Hilbert space
-target: compare two independent matrix builders and basic invariants
-```
+## Certificate artifacts
 
-The first builder consumes the generic exact Pauli term list. The second uses
-the independent spin-basis identity
+- The supplied TFIM γ=0.25125 ray passes independent floating replay. Exact
+  rational equality projection and directed 256-bit interval LDLᵀ prove a
+  strict ray for the explicitly reconstructed rational conic model. Formal
+  physical certification still awaits the source-assembly coefficient gate.
+- The supplied Kagome γ=1.272 ray is rejected by normalized equality residual
+  `6.615275739340028e-11` at tolerance `1e-12`. High-precision row evaluation
+  confirms this is a ray defect, not Float64 summation. Exact removal of 4,887
+  duplicate affine rows preserves the rejection and is staged only as a fresh
+  xH5 conditioning A/B.
 
-```text
-S_i·S_j = S_i^zS_j^z
-          + 1/2(S_i^+S_j^- + S_i^-S_j^+).
-```
+## Remaining boundary
 
-Result:
+- canonical shared-core byte records, IDs, envelope, and full tensor artifact;
+- Square normalization, stationarity, affine right-hand sides, objective, and
+  complex-to-real cone rendering;
+- a source-gated Square MOF/status runner and independent conic replay;
+- any strictly audited Square infeasibility ray and resulting bulk-gap bound.
 
-```text
-maximum matrix difference = 0
-Hermiticity error         = 0
-Tr(H)                     = 0
-||[H,S_total^z]||_max     = 0
-ground energy             = -3.9593399973974814
-ground residual           = 3.34e-15
-ground multiplicity       = 2
-first distinct energy     = -3.271581605181318
-first distinct separation = 0.6877583922161636
-```
-
-The ground doublet is consistent with an odd number of spin-1/2 sites. The
-finite-patch separation is not a bulk-gap estimate and is not used anywhere in
-the SDP specification.
-
-## Repository-level checks
-
-- `make help`: passed; it confirmed NCTSSoS/QMBCertify are optional install
-  targets. Neither was installed.
-- `make test`: could not start because the active Python lacks the
-  `pytest-cov` plugin.
-- Plain `python3 -m pytest scripts/tests/ -q`: collection then failed because
-  the active Python is 3.10 and lacks `tomllib`; the repository `.venv` is
-  absent.
-- No dependencies were installed to work around these unrelated environment
-  failures.
-- The new Julia suite and all three solver-free scripts run with Julia 1.11.1
-  and standard libraries only.
-- No trailing whitespace was found in the new files.
-- The existing tracked README was not modified; all implementation artifacts
-  are currently untracked in the team branch.
-
-## What remains unvalidated
-
-- equivalence of a refactored assembly with upstream Ising/Kagome block and
-  affine-constraint inventories;
-- the actual state-polynomial moment and gap matrices for Square J1-J2;
-- any JuMP/solver backend;
-- status-to-semantic-result handling under real solver responses;
-- infeasibility witness extraction or rational/interval validation;
-- any numerical bulk-gap or observable bound.
-
-These are the next gates. In particular, no current output supports the phrase
-“certified Square J1-J2 bulk-gap bound.”
+No current output supports the phrase “certified Square J1-J2 bulk-gap bound.”

@@ -55,7 +55,9 @@ an end-to-end formal physical bound.
   through γ=1.272; the available ray fails the equality audit. A solver-free
   audit finds 4,887 exact duplicate equalities and about 20 orders of conic
   block scale separation; exact deduplication is ready for an xH5 A/B solve.
-- **Square J1-J2:** no status/audit runner or gap number exists yet.
+- **Square J1-J2:** exact structured-basis `M/G/K` coefficient assembly now
+  passes its full `L=1,d=2,g=1/2` solver-free pair/Hermiticity gate. No conic
+  status/audit runner or gap number exists yet.
 
 ## Open items
 
