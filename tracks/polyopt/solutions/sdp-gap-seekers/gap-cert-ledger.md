@@ -41,13 +41,14 @@ The source solve is `b1a1cad`; the independent replay implementation is
 
 | model | config | numerical transition | independent evidence | conclusion |
 |---|---|---|---|---|
-| 1D TFIM | `N=9, g=0.5, d=2, lso=6`, sign-symmetric | `(0.25075,0.25125]` | γ=0.25125 ray: equality `2.2785e-15`, PSD violation `1.1629e-22`, objective `7.0270e-6`, all normalized | strong replayable floating ray; no formal Δ bound yet |
+| 1D TFIM | `N=9, g=0.5, d=2, lso=6`, sign-symmetric | `(0.25075,0.25125]` | γ=0.25125 ray projected onto 2,705 exact rational equalities; four PSD blocks proved by 256-bit directed interval LDLᵀ | strict certificate for the reconstructed conic model; source-assembly equivalence still blocks a formal physical Δ bound |
 | Kagome Heisenberg | `N=13, d=3, lso=5`, sign-symmetric | `(1.270,1.272]` | γ=1.272 ray rejected: normalized equality residual `6.6153e-11` at tolerance `1e-12`; variable scale `8.5896e16` | numerical instability; γ=1.272 is not infeasible or certified |
 
 ## Status (2026-07-28, certificate audit)
 
-- **TFIM:** the exported ray is independently replayable at floating-point
-  tolerance. Exact equalities plus rigorous PSD membership remain open.
+- **TFIM:** exact rational projection and rigorous PSD membership now pass for
+  the reconstructed conic model. The remaining gate is equality between that
+  reconstruction and the intended state-polynomial assembly.
 - **Kagome:** the transition is numerical only. Do not move an upper bound
   through γ=1.272; the available ray fails the equality audit.
 - **Square J1-J2:** no status/audit runner or gap number exists yet.

@@ -52,12 +52,16 @@ implementation branch.
   plan from model-specific code to a generic lattice/patch interface.
 - [`validation-report.md`](validation-report.md): tests, finite-patch ED oracle,
   and the precise boundary of what has not yet been certified.
+- [`STRICT_CERTIFICATE.md`](STRICT_CERTIFICATE.md): exact rational projection
+  and interval-PSD post-processing for the supplied TFIM conic ray, including
+  the remaining source-assembly proof boundary.
 
-The committed prototype uses Julia standard libraries only and does not
-assemble or solve an SDP. The external Mosek/SpectralGap/QMBCertify environment
-reported in [`notes/`](notes/) is a separate solver setup; its local patches
-must be committed and regression-tested before this repository can rely on
-them.
+The geometry/model prototype uses Julia standard libraries only and does not
+assemble or solve an SDP. The audit utilities use the declared JuMP/MOI file
+API to parse exported models but invoke no optimizer. The external
+Mosek/SpectralGap/QMBCertify environment reported in [`notes/`](notes/) is a
+separate solver setup; its local patches must be committed and
+regression-tested before this repository can rely on them.
 
 ## Result language
 

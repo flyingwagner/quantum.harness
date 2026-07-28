@@ -141,5 +141,47 @@ end
             write_synthetic_ray(joinpath(directory, "bad-tol.tsv"), [1, 1, 0, 1]);
             relative_tolerance=-1,
         )
+
+        exact_problem = extract_exact_problem(max_model; coefficient_tolerance=1e-14)
+        exact_candidate, _, _ = normalize_rational_ray(
+            [1.0, 1.0, 0.0, 1.0];
+            rational_tolerance=1e-12,
+        )
+        exact_corrected, exact_unresolved, _ = correct_with_private_pivots(
+            exact_problem,
+            exact_candidate,
+        )
+        @test isempty(exact_unresolved)
+        @test all(iszero, exact_residuals(exact_problem, exact_corrected))
+        @test objective_improvement(exact_problem, exact_corrected) == 1
+        @test rigorous_psd_proof(
+            only(exact_problem.psd_blocks),
+            exact_corrected,
+        ).proved
+
+        indefinite_candidate = BigRational[1, 1, 2, 1]
+        @test !rigorous_psd_proof(
+            only(exact_problem.psd_blocks),
+            indefinite_candidate,
+        ).proved
+
+        zero_row_block = PSDDirectionBlock(
+            2,
+            [
+                ExactAffineRow([1 => BigRational(1)]),
+                ExactAffineRow([2 => BigRational(1)]),
+                ExactAffineRow([3 => BigRational(1)]),
+            ],
+        )
+        zero_row_proof = rigorous_psd_proof(
+            zero_row_block,
+            BigRational[1, 0, 0],
+        )
+        @test zero_row_proof.proved
+        @test zero_row_proof.exact_zero_rows == (2,)
+
+        exact_path = joinpath(directory, "exact-ray.tsv")
+        write_exact_ray(exact_path, exact_corrected)
+        @test readlines(exact_path)[1] == "ordinal\tnumerator\tdenominator"
     end
 end
